@@ -17,7 +17,8 @@
     "mysql2": "^3.6.2",
     "node-schedule": "^2.1.1",
     "sequelize": "^6.33.0",
-    "telegraf": "^4.14.0"
+    "telegraf": "^4.14.0",
+    "telegram-inline-calendar": "^1.7.0"
   },
   "author": "",
   "license": "ISC"

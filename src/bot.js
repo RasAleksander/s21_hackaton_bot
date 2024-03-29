@@ -2,6 +2,7 @@
 const { Telegraf, session, Stage, Scenes, Markup } = require('telegraf');
 require('dotenv').config()
 const bot = new Telegraf(process.env.BOT_TOKEN);
+const Calendar = require('telegram-inline-calendar');
 
 // База данных и таблицы
 const sequelize = require('./database/database'); // Настройки модели БД
@@ -13,6 +14,13 @@ const sequelize = require('./database/database'); // Настройки моде
 // Файлы
 const helperFunction = require('./functions/helperFunc');
 
+const calendar = new Calendar(bot, {
+    date_format: 'DD-MM-YYYY',
+    language: 'ru',
+    bot_api: 'telegraf'
+});
+
+
 // Сцены
 const SceneGenerator = require('./scenes/Scenes.js')
 const createScene = new SceneGenerator()
@@ -23,8 +31,6 @@ const stage = new Scenes.Stage([startScene, nicknameScene])
 
 
 // Команды без диалога
-// const CommandHandler = require('./scenes/UnrequitedCommand')
-// const unrequitedCommand = new CommandHandler();
 const { voteMessage } = require('./messages/Messages.js');
 
 bot.use(session());
@@ -36,13 +42,23 @@ bot.command('start', async (ctx) => {
     ctx.scene.enter('startScene');
 })
 
-bot.command('info', async (ctx) => {
-    ctx.scene.enter(`infoScene`)
+bot.command('signup', async (ctx) => {
+    ctx.scene.enter(`signupScene`)
 })
 
-bot.command('profile', async (ctx) => {
-    unrequitedCommand.profileMessage(ctx);
+bot.command('calendar', async (ctx) => {
+    calendar.startNavCalendar(ctx.message);
 })
+
+bot.on("callback_query", (ctx) => {
+    if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
+        res = calendar.clickButtonCalendar(ctx.callbackQuery);
+        if (res !== -1) {
+            bot.telegram.sendMessage(ctx.callbackQuery.message.chat.id, "You selected: " + res);
+        }
+    }
+});
+
 
 
 bot.launch()
