@@ -6,9 +6,9 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // База данных и таблицы
 const sequelize = require('./database/database'); // Настройки модели БД
 
-// (async () => {
-//     await sequelize.sync({ alter: true });
-// })();
+(async () => {
+    await sequelize.sync({ alter: true });
+})();
 
 // Файлы
 const helperFunction = require('./functions/helperFunc');
@@ -26,6 +26,7 @@ const stage = new Scenes.Stage([startScene, nicknameScene])
 // const CommandHandler = require('./scenes/UnrequitedCommand')
 // const unrequitedCommand = new CommandHandler();
 const { voteMessage } = require('./messages/Messages.js');
+const { help } = require('forever/lib/forever/cli.js');
 
 bot.use(session());
 bot.use(stage.middleware())
@@ -33,7 +34,14 @@ bot.use(Telegraf.log())
 
 // Команды для пользователей
 bot.command('start', async (ctx) => {
-    ctx.scene.enter('startScene');
+    const match = ctx.command.args.match(/(\S+)/);
+    if (match && match[1]) {
+        const roomName = match[1];
+        helperFunction.checkQR(ctx, roomName);
+        ctx.reply(`Вы подтвердили бронь в комнате ${roomName}`);
+    } else {
+        ctx.scene.enter('startScene');
+    }
 })
 
 bot.command('info', async (ctx) => {
@@ -43,6 +51,7 @@ bot.command('info', async (ctx) => {
 bot.command('profile', async (ctx) => {
     unrequitedCommand.profileMessage(ctx);
 })
+
 
 
 bot.launch()

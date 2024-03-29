@@ -11,6 +11,13 @@ class helperFunction {
         } else { return user }
 
     }
+
+    static async checkQR(ctx, room) {
+        // const user = await Profile.findOne({ where: { id_tg: id } });
+        if (room == 'room1')
+            return true
+        else return false
+    }
 }
 
 module.exports = helperFunction;
