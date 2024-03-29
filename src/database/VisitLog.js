@@ -5,7 +5,8 @@ const VisitLog = sequelize.define('VisitLog', {
     id: {
         type: DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
-        allowNull: false
+        allowNull: false,
+        primaryKey: true
     },
     meeting_room_id: {
         type: DataTypes.INTEGER.UNSIGNED,
@@ -23,16 +24,12 @@ const VisitLog = sequelize.define('VisitLog', {
             key: 'id'
         }
     },
-    date: {
-        type: DataTypes.DATA,
-        allowNull: false
-    },
     start_time: {
-        type: DataTypes.TIME,
+        type: DataTypes.DATE,
         allowNull: false
     },
     end_time: {
-        type: DataTypes.TIME,
+        type: DataTypes.DATE,
         allowNull: false
     }
 });
