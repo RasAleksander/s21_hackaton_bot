@@ -126,7 +126,7 @@ class SceneGenerator {
                     // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: res })
                 }
             }
-            return ctx.wizard.next();
+            return await ctx.wizard.next();
         });
 
         // step3.on('callback_query', async (ctx) => {
