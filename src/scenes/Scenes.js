@@ -84,11 +84,12 @@ class SceneGenerator {
                     date_format: 'MMM D, YYYY h:mm A',
                     language: 'ru',
                     start_week_day: 1,
+                    bot_api: "telegraf",
                     time_selector_mod: true,
-                    time_range: "08:00-15:59",
+                    time_range: "00:00-24:00",
                     time_step: "15m"
                 });
-                calendar.startNavCalendar(ctx.message);
+                calendar.startNavCalendar(ctx);
                 Button = calendar
 
                 return ctx.wizard.next();
