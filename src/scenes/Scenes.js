@@ -1,8 +1,10 @@
 const { Scenes, WizardScene, Composer, Markup } = require('telegraf');
 const sequelize = require('../database/database');
 const Profile = require('../database/ProfilePeer');
+const City = require('../database/City');
 
 const helperFunction = require('../functions/helperFunc');
+const Calendar = require('telegram-inline-calendar');
 const { startMessages, nicknameMessages } = require('../messages/Messages');
 
 class SceneGenerator {
@@ -55,15 +57,59 @@ class SceneGenerator {
                     await Profile.update({ nickname: nickname, username_tg: ctx.from.username }, { where: { id_tg: ctx.from.id } })
                     return ctx.scene.leave();
                 } else {
-                    // если пользователь новый заносим в базу данныч и идем в сцену смены города
+                    // если пользователь новый заносим в базу данныч и идем в сцену смены города (опционально)
                     const username = ctx.from.username || 'default_username';
-                    await Profile.create({ id_tg: ctx.from.id, nickname: nickname, limit: 60, tg_username: username })
+                    await Profile.create({ id_tg: ctx.from.id, tg_peername: username, nickname: nickname, city_id: 1, limit: 60 })
                     await ctx.reply(nicknameMessages.info_for_new)
+                    // return ctx.scene.enter('cityScene');
                 }
             }
         });
         return nicknameScene;
     }
+
+    signupScene() {
+        // Создаем шаг выбора типа игры
+        const step1 = new Composer()
+        const step2 = new Composer()
+        let Button;
+
+        step1.on(`text`, async (ctx) => {
+            const user = await helperFunction.doesUserExist(ctx.from.id)
+            if (!user) {
+                await ctx.reply(signupMessages.notUser);
+                return ctx.scene.leave();
+            } else {
+                const calendar = new Calendar(ctx, {
+                    date_format: 'MMM D, YYYY h:mm A',
+                    language: 'ru',
+                    start_week_day: 1,
+                    time_selector_mod: true,
+                    time_range: "08:00-15:59",
+                    time_step: "15m"
+                });
+                calendar.startNavCalendar(ctx.message);
+                Button = calendar
+
+                return ctx.wizard.next();
+            }
+        });
+
+
+        // Шаг выбора игры
+        step2.on('callback_query', async (ctx) => {
+            if (ctx.callbackQuery.message.message_id == Button.chats.get(ctx.callbackQuery.message.chat.id)) {
+                let res = Button.clickButtonCalendar(ctx.callbackQuery);
+                if (res !== -1) {
+                    ctx.reply("You selected: " + res);
+                }
+            }
+        });
+
+        const signup = new Scenes.WizardScene('signupScene', step1, step2)
+        return signup;
+    }
+
 }
 
 

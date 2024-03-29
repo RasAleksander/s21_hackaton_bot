@@ -2,8 +2,7 @@ const { Telegraf, Markup, Input } = require('telegraf')
 const sequelize = require('../database/database');
 // const Admin = require('../database/AdminModel'); // Модель списка админов
 const Profile = require('../database/ProfilePeer'); // Модель списка админов
-const MeetingRoom = require('../database/MeetingRoom');
-const VisitLog = require('../database/VisitLog');
+const MeetingRoom = require('../database/MeetingRoom'); // Модель списка админов
 
 class helperFunction {
     static async doesUserNickname(id) {
@@ -28,6 +27,11 @@ class helperFunction {
         } else {
             ctx.reply(`Не та комната`);
         }
+    }
+
+    static async doesUserExist(id) {
+        const user = await Profile.findOne({ where: { id_tg: id } });
+        return user;
     }
 }
 

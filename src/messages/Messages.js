@@ -12,8 +12,20 @@ const nicknameMessages = {
     info_for_new: 'Хорошо приятель, тогда вот тебе список того, что я могу тебе провернуть:'
 };
 
+const signupMessages = {
+    notUser: 'Упс, сначала нужно зарегистрироваться!',
+    whichType: `Что ты выберешь сегодня, `,
+    listGames: 'Смотри, какие события нас ждут:',
+    noGames: 'Прости, пока на улицах всё тихо. Я сообщу тебе, когда узнаю о ближайшей игре',
+    posterText: 'Ну как, ты в деле? ',
+    exit: 'Ты покинул запись на игру',
+    youSignedup: 'Ты записан в переговорку!',
+    alreadySignedup: 'Ты уже записан!',
+}
+
 
 module.exports = {
     startMessages,
-    nicknameMessages
+    nicknameMessages,
+    signupMessages
 }
