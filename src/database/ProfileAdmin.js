@@ -5,7 +5,8 @@ const ProfileAdmin = sequelize.define('ProfileAdmin', {
     id: {
         type: DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
-        allowNull: false
+        allowNull: false,
+        primaryKey: true
     },
     peer_id: {
         type: DataTypes.INTEGER.UNSIGNED,

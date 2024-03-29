@@ -1,6 +1,8 @@
 const { Scenes, WizardScene, Composer, Markup } = require('telegraf');
 const sequelize = require('../database/database');
 const Profile = require('../database/ProfilePeer');
+const Visit = require('../database/VisitLog.js');
+const Room = require('../database/MeetingRoom.js');
 const City = require('../database/City');
 
 const helperFunction = require('../functions/helperFunc');
@@ -14,6 +16,7 @@ class SceneGenerator {
         const start = new Scenes.BaseScene('startScene')
 
         start.enter(async (ctx) => {
+            // await Room.create({ name: 'Infinity', description: 'Ближайшая переговорка', floor: 20 })
             const userExists = await helperFunction.doesUserNickname(ctx.from.id);
             if (userExists) {
                 await ctx.reply(startMessages.old_gamer + ` ${userExists}?`)
@@ -72,7 +75,10 @@ class SceneGenerator {
         // Создаем шаг выбора типа игры
         const step1 = new Composer()
         const step2 = new Composer()
+        const step3 = new Composer()
+        const step4 = new Composer()
         let Button;
+        let start_time;
 
         step1.on(`text`, async (ctx) => {
             const user = await helperFunction.doesUserExist(ctx.from.id)
@@ -81,7 +87,7 @@ class SceneGenerator {
                 return ctx.scene.leave();
             } else {
                 const calendar = new Calendar(ctx, {
-                    date_format: 'MMM D, YYYY h:mm A',
+                    date_format: 'DD-MM-YYYY HH:mm',
                     language: 'ru',
                     start_week_day: 1,
                     bot_api: "telegraf",
@@ -100,14 +106,56 @@ class SceneGenerator {
         // Шаг выбора игры
         step2.on('callback_query', async (ctx) => {
             if (ctx.callbackQuery.message.message_id == Button.chats.get(ctx.callbackQuery.message.chat.id)) {
-                let res = Button.clickButtonCalendar(ctx.callbackQuery);
-                if (res !== -1) {
-                    ctx.reply("You selected: " + res);
+                ctx.wizard.state.start_time = await Button.clickButtonCalendar(ctx.callbackQuery);
+                console.log(ctx.wizard.state.start_time)
+                if (ctx.wizard.state.start_time !== -1) {
+                    await ctx.editMessageText(`На сколько времени ты хочешь арендовать переговорку?`, {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '15 мин', callback_data: 15 }],
+                                [{ text: '30 мин', callback_data: '30' }],
+                                [{ text: '45 мин', callback_data: 45 }],
+                                [{ text: '60 мин', callback_data: 60 }],
+                            ],
+                            one_time_keyboard: true,
+                        },
+                    })
+                    // await ctx.reply(res);
+                    // ctx.wizard.state.res = res
+
+                    // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: res })
                 }
             }
+            return await ctx.wizard.next();
         });
 
-        const signup = new Scenes.WizardScene('signupScene', step1, step2)
+        // step3.on('callback_query', async (ctx) => {
+        //     // ctx.wizard.state.start_time = ctx.callbackQuery.data
+        //     await ctx.editMessageText(`На сколько времени ты хочешь арендовать переговорку?`, {
+        //         reply_markup: {
+        //             inline_keyboard: [
+        //                 [{ text: '15 мин', callback_data: 15 }],
+        //                 [{ text: '30 мин', callback_data: '30' }],
+        //                 [{ text: '45 мин', callback_data: 45 }],
+        //                 [{ text: '60 мин', callback_data: 60 }],
+        //             ],
+        //             one_time_keyboard: true,
+        //         },
+        //     })
+        //     return ctx.wizard.next();
+        // });
+
+        step3.on('callback_query', async (ctx) => {
+
+            let end_time = ctx.wizard.state.start_time + ctx.callbackQuery.data
+            await ctx.reply(`Старт: ${ctx.wizard.state.start_time}, Конец: ${end_time}`)
+            // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: end_time })
+            ctx.scene.leave()
+        })
+
+
+
+        const signup = new Scenes.WizardScene('signupScene', step1, step2, step3, step4)
         return signup;
     }
 
