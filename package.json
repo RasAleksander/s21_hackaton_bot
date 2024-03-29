@@ -1,0 +1,24 @@
+{
+  "name": "s21_hackaton_bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "dev": "nodemon src/bot.js",
+    "start": "node src/bot.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RasAleksander/s21_hackaton_bot.git"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "forever": "^4.0.3",
+    "mysql2": "^3.6.2",
+    "node-schedule": "^2.1.1",
+    "sequelize": "^6.33.0",
+    "telegraf": "^4.14.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
