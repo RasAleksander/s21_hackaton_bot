@@ -1,7 +1,7 @@
 // Библиотеки
 const { Telegraf, session, Stage, Scenes, Markup } = require('telegraf');
 require('dotenv').config()
-const bot = new Telegraf(process.env.BOT_TOKEN, { polling: true });
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // База данных и таблицы
 const sequelize = require('./database/database'); // Настройки модели БД
@@ -40,18 +40,7 @@ bot.command('signup', async (ctx) => {
     ctx.scene.enter(`signupScene`)
 })
 
-bot.command('calendar', async (ctx) => {
-    calendar.startNavCalendar(ctx.message);
-})
 
-bot.on("callback_query", (ctx) => {
-    if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-        res = calendar.clickButtonCalendar(ctx.callbackQuery);
-        if (res !== -1) {
-            bot.telegram.sendMessage(ctx.callbackQuery.message.chat.id, "You selected: " + res);
-        }
-    }
-});
 
 
 
