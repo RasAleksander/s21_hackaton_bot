@@ -1,6 +1,6 @@
 const { Scenes, WizardScene, Composer, Markup } = require('telegraf');
 const sequelize = require('../database/database');
-const Profile = require('../database/ProfileModel');
+const Profile = require('../database/ProfilePeer');
 
 const helperFunction = require('../functions/helperFunc');
 const { startMessages, nicknameMessages } = require('../messages/Messages');

@@ -6,9 +6,9 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // База данных и таблицы
 const sequelize = require('./database/database'); // Настройки модели БД
 
-(async () => {
-    await sequelize.sync({ alter: true });
-})();
+// (async () => {
+//     await sequelize.sync({ alter: true });
+// })();
 
 // Файлы
 const helperFunction = require('./functions/helperFunc');
@@ -34,11 +34,10 @@ bot.use(Telegraf.log())
 
 // Команды для пользователей
 bot.command('start', async (ctx) => {
-    const match = ctx.command.args.match(/(\S+)/);
+    const match = ctx.message.text.split(' ');
     if (match && match[1]) {
         const roomName = match[1];
         helperFunction.checkQR(ctx, roomName);
-        ctx.reply(`Вы подтвердили бронь в комнате ${roomName}`);
     } else {
         ctx.scene.enter('startScene');
     }
