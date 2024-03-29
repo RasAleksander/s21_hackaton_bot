@@ -106,49 +106,31 @@ class SceneGenerator {
         // Шаг выбора игры
         step2.on('callback_query', async (ctx) => {
             if (ctx.callbackQuery.message.message_id == Button.chats.get(ctx.callbackQuery.message.chat.id)) {
-                ctx.wizard.state.start_time = await Button.clickButtonCalendar(ctx.callbackQuery);
-                console.log(ctx.wizard.state.start_time)
-                if (ctx.wizard.state.start_time !== -1) {
-                    await ctx.editMessageText(`На сколько времени ты хочешь арендовать переговорку?`, {
+                start_time = await Button.clickButtonCalendar(ctx.callbackQuery);
+                if (start_time !== -1) {
+                    await ctx.reply(`На сколько времени ты хочешь арендовать переговорку?`, {
                         reply_markup: {
                             inline_keyboard: [
                                 [{ text: '15 мин', callback_data: 15 }],
-                                [{ text: '30 мин', callback_data: '30' }],
+                                [{ text: '30 мин', callback_data: 30 }],
                                 [{ text: '45 мин', callback_data: 45 }],
                                 [{ text: '60 мин', callback_data: 60 }],
                             ],
                             one_time_keyboard: true,
                         },
                     })
-                    // await ctx.reply(res);
-                    // ctx.wizard.state.res = res
 
                     // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: res })
+                    return ctx.wizard.next();
                 }
             }
-            return await ctx.wizard.next();
         });
 
-        // step3.on('callback_query', async (ctx) => {
-        //     // ctx.wizard.state.start_time = ctx.callbackQuery.data
-        //     await ctx.editMessageText(`На сколько времени ты хочешь арендовать переговорку?`, {
-        //         reply_markup: {
-        //             inline_keyboard: [
-        //                 [{ text: '15 мин', callback_data: 15 }],
-        //                 [{ text: '30 мин', callback_data: '30' }],
-        //                 [{ text: '45 мин', callback_data: 45 }],
-        //                 [{ text: '60 мин', callback_data: 60 }],
-        //             ],
-        //             one_time_keyboard: true,
-        //         },
-        //     })
-        //     return ctx.wizard.next();
-        // });
 
         step3.on('callback_query', async (ctx) => {
 
-            let end_time = ctx.wizard.state.start_time + ctx.callbackQuery.data
-            await ctx.reply(`Старт: ${ctx.wizard.state.start_time}, Конец: ${end_time}`)
+            let end_time = start_time + ctx.callbackQuery.data
+            await ctx.reply(`Старт: ${start_time}, Конец: ${end_time}`)
             // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: end_time })
             ctx.scene.leave()
         })

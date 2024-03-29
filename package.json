@@ -17,6 +17,7 @@
     "forever": "^4.0.3",
     "mysql2": "^3.6.2",
     "node-schedule": "^2.1.1",
+    "nodemon": "^3.1.0",
     "qrcode": "^1.5.3",
     "sequelize": "^6.33.0",
     "telegraf": "^4.14.0",
