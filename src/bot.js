@@ -1,8 +1,7 @@
 // Библиотеки
 const { Telegraf, session, Stage, Scenes, Markup } = require('telegraf');
 require('dotenv').config()
-const bot = new Telegraf(process.env.BOT_TOKEN);
-const Calendar = require('telegram-inline-calendar');
+const bot = new Telegraf(process.env.BOT_TOKEN, { polling: true });
 
 // База данных и таблицы
 const sequelize = require('./database/database'); // Настройки модели БД
@@ -14,12 +13,6 @@ const sequelize = require('./database/database'); // Настройки моде
 // Файлы
 const helperFunction = require('./functions/helperFunc');
 
-const calendar = new Calendar(bot, {
-    date_format: 'DD-MM-YYYY',
-    language: 'ru',
-    bot_api: 'telegraf'
-});
-
 
 // Сцены
 const SceneGenerator = require('./scenes/Scenes.js')
@@ -27,7 +20,8 @@ const createScene = new SceneGenerator()
 
 const startScene = createScene.startScene()
 const nicknameScene = createScene.nicknameScene()
-const stage = new Scenes.Stage([startScene, nicknameScene])
+const signupScene = createScene.signupScene()
+const stage = new Scenes.Stage([startScene, nicknameScene, signupScene])
 
 
 // Команды без диалога
