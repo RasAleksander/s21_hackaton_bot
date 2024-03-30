@@ -3,11 +3,12 @@ const fs = require('fs');
 
 // Пример данных о бронировании
 const bookings = [
-    { 'room_id': 1, 'date': '2024-03-30', 'start_time': '08:00', 'end_time': '08:30' },
-    { 'room_id': 2, 'date': '2024-03-30', 'stastart_timert': '09:00', 'end_time': '11:00' },
-    { 'room_id': 3, 'date': '2024-03-30', 'start_time': '10:00', 'end_time': '12:00' },
-    { 'room_id': 4, 'date': '2024-03-30', 'start_time': '13:00', 'end_time': '15:00' },
-    { 'room_id': 5, 'date': '2024-03-30', 'start_time': '14:00', 'end_time': '16:00' }
+    { 'room_id': 1, 'start_time': '08:00', 'end_time': '08:30' },
+    { 'room_id': 2, 'start_time': '09:00', 'end_time': '10:00' },
+    { 'room_id': 3, 'start_time': '10:00', 'end_time': '11:45' },
+    { 'room_id': 4, 'start_time': '13:45', 'end_time': '14:15' },
+    { 'room_id': 5, 'start_time': '14:00', 'end_time': '15:00' },
+    { 'room_id': 5, 'start_time': '16:30', 'end_time': '16:15' }
 ];
 
 // Создаем холст
@@ -48,9 +49,9 @@ for (let hour = 0; hour <= 24; hour++) {
 // Рисуем занятые ячейки в красном цвете
 ctx.fillStyle = 'red';
 for (const booking of bookings) {
-    const room = booking.room;
-    const [startHour, startMinute] = booking.start.split(':').map(Number);
-    const [endHour, endMinute] = booking.end.split(':').map(Number);
+    const room = booking.room_id;
+    const [startHour, startMinute] = booking.start_time.split(':').map(Number);
+    const [endHour, endMinute] = booking.end_time.split(':').map(Number);
     const start_y = ((startHour * 60 + startMinute) / (24 * 60)) * canvasHeight;
     const end_y = ((endHour * 60 + endMinute) / (24 * 60)) * canvasHeight;
     ctx.fillRect((room - 1) * ((canvasWidth - 50) / 5) + 50, start_y, (canvasWidth - 50) / 5, end_y - start_y);
