@@ -1,0 +1,4 @@
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=$sudo
+DB_NAME=S21_hackathon
