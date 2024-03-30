@@ -298,147 +298,115 @@ class SceneGenerator {
         return admin;
     }
 
-    blockSpaceScene() {// Шаг 1: Проверка существования пользователя
+    blockSpaceScene() {
+
+        // Создаем шаг выбора типа игры
+        const step2 = new Composer()
+        const step3 = new Composer()
+        const step4 = new Composer()
+        let calendar, user;
+        let date, start_time;
+        let delete_msg;
+
         const step1 = async (ctx) => {
-            const user = await helperFunction.doesUserExist(ctx.from.id);
+            user = await helperFunction.doesUserExist(ctx.from.id)
             if (!user) {
                 await ctx.reply(signupMessages.notUser);
                 return ctx.scene.leave();
             } else {
-                // Создаем календарь для выбора даты начала бронирования
-                const startCalendar = new Calendar(ctx, {
+                calendar = new Calendar(ctx, {
                     date_format: 'YYYY-MM-DD',
                     language: 'ru',
                     start_week_day: 1,
                     bot_api: "telegraf",
                     start_date: 'now',
                 });
-                startCalendar.startNavCalendar(ctx);
+                calendar.startNavCalendar(ctx);
                 return ctx.wizard.next();
             }
         };
 
-        // Шаг 2: Выбор даты начала бронирования
-        const step2 = new Composer();
-
-        // Обработчик callback-запросов для шага 2
+        // Шаг выбора игры
         step2.on('callback_query', async (ctx) => {
-            if (ctx.callbackQuery.message.message_id === calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-                const startDate = await calendar.clickButtonCalendar(ctx.callbackQuery);
-                if (startDate !== -1) {
-                    // Удаляем предыдущее сообщение с календарем
-                    ctx.deleteMessage(delete_msg.message_id);
+            if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
+                date = await calendar.clickButtonCalendar(ctx.callbackQuery);
+                if (date !== -1) {
+                    let start_date = moment(date), end_date = moment(date).add(1, 'days');
+                    const visits = await Visit.findAll({
+                        where: {
+                            start_time: {
+                                [Sequelize.Op.between]: [start_date, end_date]
+                            }
+                        }
+                    });
 
-                    // Сохраняем выбранную дату начала бронирования в контексте
-                    ctx.session.startDate = startDate;
+                    delete_msg = await ctx.reply(`Вы выбрали ${date}`, {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: 'Назад', callback_data: 'Back' }],
+                            ],
+                            one_time_keyboard: true,
+                        },
+                    });
 
-                    // Выводим сообщение с запросом выбора времени начала бронирования
-                    ctx.reply("Выберите время начала бронирования:");
-
-                    // Создаем новый экземпляр календаря для выбора времени начала бронирования
-                    const startTimeCalendar = new Calendar(ctx, {
+                    const start = await helperFunction.setStartTime(date)
+                    calendar = new Calendar(ctx, {
                         date_format: 'HH:mm',
                         language: 'ru',
                         bot_api: "telegraf",
-                        time_range: "00:00-23:45",
+                        time_range: start + "-23:59",
                         time_step: "15m",
                         custom_start_msg: 'Выберите время'
                     });
 
-                    // Отображаем календарь для выбора времени начала бронирования
-                    startTimeCalendar.startNavCalendar(ctx);
-
+                    calendar.startTimeSelector(ctx);
                     return ctx.wizard.next();
+
                 }
             }
         });
 
-        // Шаг 3: Выбор времени начала бронирования
-        const step3 = new Composer();
-
-        // Обработчик callback-запросов для шага 3
-        step3.on('callback_query', async (ctx) => {
-            if (ctx.callbackQuery.message.message_id === calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-                const startTime = await calendar.clickButtonCalendar(ctx.callbackQuery);
-                if (startTime !== -1) {
-                    // Удаляем предыдущее сообщение с календарем
+        step3.on('callback_query', (ctx) => {
+            if (ctx.callbackQuery.data == 'Back') {
+                ctx.deleteMessage(delete_msg.message_id);
+                ctx.deleteMessage(calendar.chats.get(ctx.callbackQuery.message.chat.id));
+                ctx.scene.reenter()
+            }
+            if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
+                start_time = calendar.clickButtonCalendar(ctx.callbackQuery);
+                if (start_time !== -1) {
                     ctx.deleteMessage(delete_msg.message_id);
-
-                    // Сохраняем выбранное время начала бронирования в контексте
-                    ctx.session.startTime = startTime;
-
-                    // Выводим сообщение с запросом выбора даты и времени окончания бронирования
-                    ctx.reply("Выберите дату и время окончания бронирования:");
-
-                    // Создаем новый экземпляр календаря для выбора даты и времени окончания бронирования
-                    const endTimeCalendar = new Calendar(ctx, {
-                        date_format: 'YYYY-MM-DD',
-                        language: 'ru',
-                        start_week_day: 1,
-                        bot_api: "telegraf",
-                        start_date: 'now',
+                    ctx.reply("You selected: " + date + ' ' + start_time + '\n На сколько времени вы хотите забронировать комнату?', {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '15 мин', callback_data: 15 },
+                                { text: '30 мин', callback_data: 30 },
+                                { text: '45 мин', callback_data: 45 },
+                                { text: '60 мин', callback_data: 60 }]
+                            ],
+                            one_time_keyboard: true,
+                        }
                     });
-
-                    // Отображаем календарь для выбора даты и времени окончания бронирования
-                    endTimeCalendar.startNavCalendar(ctx);
-
                     return ctx.wizard.next();
                 }
             }
         });
 
-        // Шаг 4: Выбор даты и времени окончания бронирования
-        const step4 = new Composer();
+        step5.on('callback_query', async (ctx) => {
 
-        // Обработчик callback-запросов для шага 4
-        step4.on('callback_query', async (ctx) => {
-            if (ctx.callbackQuery.message.message_id === calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-                const endTime = await calendar.clickButtonCalendar(ctx.callbackQuery);
-                if (endTime !== -1) {
-                    // Удаляем предыдущее сообщение с календарем
-                    ctx.deleteMessage(delete_msg.message_id);
+            start_time = moment(date + ' ' + start_time)
+            let end_time = moment(start_time)
+            end_time.add(parseInt(ctx.callbackQuery.data, 10), 'minutes')
+            await ctx.reply(`Старт: ${start_time}, Конец: ${end_time}`)
+            // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: end_time })
+            await Visit.create({ meeting_room_id: 1, peer_id: user.id, start_time: start_time, end_time: end_time, })
+            ctx.scene.leave()
+        })
 
-                    // Сохраняем выбранную дату и время окончания бронирования в контексте
-                    ctx.session.endTime = endTime;
+        const blockSpace = new Scenes.WizardScene('blockSpaceScene', step1, step2, step3, step4)
+        // signup.hears('Back', goBackToStep1);
+        return blockSpace;
 
-                    // Выводим сообщение с информацией о выборе пользователя
-                    ctx.reply(`Выбранное время окончания: ${endTime}`);
-
-                    // Создаем новый экземпляр календаря для выбора даты и времени окончания бронирования
-                    const endTimeCalendar = new Calendar(ctx, {
-                        date_format: 'YYYY-MM-DD',
-                        language: 'ru',
-                        start_week_day: 1,
-                        bot_api: "telegraf",
-                        start_date: 'now',
-                    });
-
-                    // Отображаем календарь для выбора даты и времени окончания бронирования
-                    endTimeCalendar.startNavCalendar(ctx);
-
-                    return ctx.wizard.next();
-                }
-            }
-        });
-
-        // Шаг 5: Сохранение и вывод информации о бронировании
-        const step5 = async (ctx) => {
-            // Получаем информацию о бронировании из контекста
-            const { startDate, startTime, endTime } = ctx.session;
-
-            // Отправляем сообщение с информацией о бронировании
-            await ctx.reply(`Вы выбрали: 
-            Начало бронирования: ${startDate} ${startTime}
-            Окончание бронирования: ${endDate} ${endTime}`);
-
-            // Создаем запись о бронировании в базе данных или выполняем другие необходимые действия
-
-            // Завершаем сцену
-            return ctx.scene.leave();
-        };
-
-        // Добавляем шаги в сцену
-        blockSpaceScene.register(step1, step2, step3, step4, step5);
     }
 
 
