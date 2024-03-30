@@ -27,7 +27,8 @@ const createScene = new SceneGenerator()
 const startScene = createScene.startScene()
 const nicknameScene = createScene.nicknameScene()
 const signupScene = createScene.signupScene()
-const stage = new Scenes.Stage([startScene, nicknameScene, signupScene])
+const cancelScene = createScene.cancelScene()
+const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, cancelScene])
 
 
 // Команды без диалога
@@ -51,6 +52,10 @@ bot.command('start', async (ctx) => {
 
 bot.command('signup', async (ctx) => {
     ctx.scene.enter(`signupScene`)
+})
+
+bot.command('cancel', async (ctx) => {
+    ctx.scene.enter(`cancelScene`)
 })
 
 

@@ -1,4 +1,6 @@
 const { Scenes, WizardScene, Composer, Markup } = require('telegraf');
+const moment = require('moment');
+
 const sequelize = require('../database/database');
 const Profile = require('../database/ProfilePeer');
 const Visit = require('../database/VisitLog.js');
@@ -139,6 +141,55 @@ class SceneGenerator {
 
         const signup = new Scenes.WizardScene('signupScene', step1, step2, step3, step4)
         return signup;
+    }
+
+
+    cancelScene() {
+        const cancelScene = new Scenes.BaseScene('cancelScene');
+        cancelScene.enter(async (ctx) => {
+            const profile = await Profile.findOne({
+                where: {
+                    id_tg: ctx.from.id
+                }
+            });
+            const bookings = await Visit.findAll({
+                where: {
+                    peer_id: profile.id,
+                    //   status: { [Op.ne]: 3 } // выбираем только активные бронирования
+                }
+            });
+
+            if (bookings.length === 0) {
+                await ctx.reply('У вас нет активных бронирований.');
+                return ctx.scene.leave();
+            }
+
+            // Создаем пустой массив для кнопок
+            const buttons = [];
+
+            const formattedStartTime = moment(bookings.start_time).format('DD-MM-YYYY HH:mm');
+            const formattedEndTime = moment(bookings.end_time).format('DD-MM-YYYY HH:mm');
+
+            // Создаем кнопки для каждого бронирования в цикле
+            bookings.forEach((booking) => {
+                buttons.push(
+                    Markup.button.callback(
+                        `${formattedStartTime} - ${formattedEndTime}`,
+                        `cancel_${booking.id}`
+                    )
+                );
+            });
+
+            // Создаем inline клавиатуру с кнопками
+            const keyboard = Markup.inlineKeyboard(buttons);
+
+            // Отправляем сообщение с inline клавиатурой
+            await ctx.reply('Выберите бронирование для отмены:', keyboard);
+
+            return ctx.scene.leave();
+        });
+
+        return cancelScene;
     }
 
 }
