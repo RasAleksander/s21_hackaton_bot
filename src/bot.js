@@ -28,7 +28,8 @@ const startScene = createScene.startScene()
 const nicknameScene = createScene.nicknameScene()
 const signupScene = createScene.signupScene()
 const cancelScene = createScene.cancelScene()
-const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, cancelScene])
+const adminScene = createScene.adminScene()
+const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, cancelScene, adminScene])
 
 
 // Команды без диалога
@@ -56,6 +57,10 @@ bot.command('signup', async (ctx) => {
 
 bot.command('cancel', async (ctx) => {
     ctx.scene.enter(`cancelScene`)
+})
+
+bot.command('admin', async (ctx) => {
+    ctx.scene.enter(`adminScene`)
 })
 
 

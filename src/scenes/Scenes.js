@@ -1,4 +1,5 @@
-const { Scenes, WizardScene, Composer, Markup } = require('telegraf');
+const { Scenes, WizardScene, Composer } = require('telegraf');
+const { Markup } = require('telegraf');
 const moment = require('moment');
 
 const sequelize = require('../database/database');
@@ -155,7 +156,7 @@ class SceneGenerator {
             const bookings = await Visit.findAll({
                 where: {
                     peer_id: profile.id,
-                    //   status: { [Op.ne]: 3 } // выбираем только активные бронирования
+                    status: 1 // выбираем только активные бронирования 
                 }
             });
 
@@ -163,19 +164,17 @@ class SceneGenerator {
                 await ctx.reply('У вас нет активных бронирований.');
                 return ctx.scene.leave();
             }
-
-            // Создаем пустой массив для кнопок
             const buttons = [];
-
-            const formattedStartTime = moment(bookings.start_time).format('DD-MM-YYYY HH:mm');
-            const formattedEndTime = moment(bookings.end_time).format('DD-MM-YYYY HH:mm');
 
             // Создаем кнопки для каждого бронирования в цикле
             bookings.forEach((booking) => {
+                const formattedStartTime = moment(booking.start_time).format('DD-MM-YYYY || HH:mm');
+                const formattedEndTime = moment(booking.end_time).format('HH:mm');
+
                 buttons.push(
                     Markup.button.callback(
                         `${formattedStartTime} - ${formattedEndTime}`,
-                        `cancel_${booking.id}`
+                        `${booking.id}`
                     )
                 );
             });
@@ -186,11 +185,77 @@ class SceneGenerator {
             // Отправляем сообщение с inline клавиатурой
             await ctx.reply('Выберите бронирование для отмены:', keyboard);
 
+            // return ctx.scene.leave();
+        });
+
+        cancelScene.on('callback_query', async (ctx) => {
+            const bookingId = ctx.callbackQuery.data; // Указываем ctx перед callbackQuery
+            const booking = await Visit.findOne({
+                where: {
+                    id: bookingId,
+                }
+            });
+            if (!booking) {
+                await ctx.reply('Бронь не найдена.');
+            } else {
+                await booking.update({ status: 3 }); // обновляем статус на "отменено"
+                await ctx.reply('Бронь успешно отменена.');
+            }
+
             return ctx.scene.leave();
         });
 
         return cancelScene;
     }
+
+    adminScene() {
+        const step1 = new Composer()
+        const step2 = new Composer()
+        step1.on(`text`, async (ctx) => {
+
+            await ctx.reply('Какое действие вы хотите?', {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: 'Добавить новое пространство', callback_data: 'New_Space' }],
+                        [{ text: 'Заблокировать пространство', callback_data: 'Block_Space' }],
+                        [{ text: 'Разблокировать пространство', callback_data: 'Unblock_Space' }],
+                        [{ text: 'Удалить пространство', callback_data: 'Delete_Space' }],
+                    ],
+                    one_time_keyboard: true,
+                },
+
+            })
+            return ctx.wizard.next();
+        })
+        step2.on(`callback_query`, async (ctx) => {
+            const chosenAction = ctx.callbackQuery.data;
+            switch (chosenAction) {
+                case 'New_Space':
+                    ctx.scene.enter('newSpaceScene');
+                    break;
+                case 'Block_Space':
+                    ctx.scene.enter('blockSpaceScene');
+                    break;
+
+                case 'Delete_Space':
+                    ctx.scene.enter('deleteSpaceScene');
+                    break;
+                case 'Unblock_Space':
+                    ctx.scene.enter('unblockSpaceScene');
+                    break;
+                default:
+                    ctx.scene.leave();
+                    break;
+            }
+        })
+
+        const poster = new Scenes.WizardScene('posterScene', step1, step2)
+        return poster;
+    }
+
+
+
+
 
 }
 
