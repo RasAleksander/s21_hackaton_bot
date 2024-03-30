@@ -21,10 +21,10 @@ class SceneGenerator {
         start.enter(async (ctx) => {
             const userExists = await helperFunction.doesUserNickname(ctx.from.id);
             if (userExists) {
-                await ctx.reply(startMessages.old_gamer + ` ${userExists}?`)
+                await ctx.reply(greetingSignedupPeer.greetingOldPeer + ` ${userExists}?`)
                 ctx.scene.leave();
             } else {
-                await ctx.reply(startMessages.new_gamer)
+                await ctx.reply(greetingSignedupPeer.exception)
                 ctx.scene.enter('nicknameScene')
             }
         })
@@ -43,9 +43,10 @@ class SceneGenerator {
             let nickname = ctx.message.text;
 
             if (!nicknameReg.test(nickname)) {
-                await ctx.reply(nicknameMessages.wrong_nickname);
+                await ctx.reply(nicknameMessages.nicknameMessages);
                 ctx.scene.reenter();
             } else {
+                await ctx.reply(nicknameMessages.correctNickname);
                 await sendEmailsFunction.sendEmail(nickname);
                 const tokenInfo = await Token.findOne({ where: { nickname: 'nickname' } }); 
                 const verifyValue = tokenInfo.verify;
