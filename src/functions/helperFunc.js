@@ -96,6 +96,17 @@ class helperFunction {
         }
     }
 
+    static async setStartTime(date) {
+        let now = moment();
+        if (moment().format('YYYY-MM-DD') == date)
+            now.minutes(Math.ceil(now.minutes() / 15) * 15)
+        else {
+            now.minutes('00')
+            now.hours('00')
+        }
+        now = now.format('HH:mm')
+        return now;
+    }
 }
 
 module.exports = helperFunction;
