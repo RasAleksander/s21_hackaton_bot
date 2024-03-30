@@ -2,6 +2,7 @@ const { Scenes, WizardScene, Composer } = require('telegraf');
 const { Markup } = require('telegraf');
 const moment = require('moment');
 
+
 const sequelize = require('../database/database');
 const Profile = require('../database/ProfilePeer');
 const Visit = require('../database/VisitLog.js');
@@ -134,7 +135,7 @@ class SceneGenerator {
 
             let end_time = start_time + ctx.callbackQuery.data
             await ctx.reply(`Старт: ${start_time}, Конец: ${end_time}`)
-            // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: end_time })
+            await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: end_time })
             ctx.scene.leave()
         })
 
@@ -248,12 +249,77 @@ class SceneGenerator {
                     break;
             }
         })
-
-        const poster = new Scenes.WizardScene('posterScene', step1, step2)
-        return poster;
+        const admin = new Scenes.WizardScene('adminScene', step1, step2)
+        return admin;
     }
 
+    blockSpaceScene() {
+        // Создаем шаг выбора типа игры
+        const step1 = new Composer()
+        const step2 = new Composer()
+        const step3 = new Composer()
+        const step4 = new Composer()
+        let Button;
+        let start_time;
 
+        step1.on(`callback_query`, async (ctx) => {
+            const calendar = new Calendar(ctx, {
+                date_format: 'DD-MM-YYYY HH:mm',
+                language: 'ru',
+                start_week_day: 1,
+                bot_api: "telegraf",
+                time_selector_mod: true,
+                time_range: "00:00-24:00",
+                time_step: "15m"
+            });
+            const user = await helperFunction.doesUserExist(ctx.from.id)
+            if (!user) {
+                await ctx.reply(signupMessages.notUser);
+                return ctx.scene.leave();
+            } else {
+                calendar.startNavCalendar(ctx);
+                Button = calendar
+
+                return ctx.wizard.next();
+            }
+        });
+
+        step2.on('callback_query', async (ctx) => {
+            if (ctx.callbackQuery.message.message_id == Button.chats.get(ctx.callbackQuery.message.chat.id)) {
+                start_time = await Button.clickButtonCalendar(ctx.callbackQuery);
+                if (start_time !== -1) {
+                    await ctx.reply(`На сколько времени ты хочешь арендовать переговорку?`, {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '15 мин', callback_data: 15 }],
+                                [{ text: '30 мин', callback_data: 30 }],
+                                [{ text: '45 мин', callback_data: 45 }],
+                                [{ text: '60 мин', callback_data: 60 }],
+                            ],
+                            one_time_keyboard: true,
+                        },
+                    })
+
+                    // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: res })
+                    return ctx.wizard.next();
+                }
+            }
+        });
+
+
+        step3.on('callback_query', async (ctx) => {
+
+            let end_time = start_time + ctx.callbackQuery.data
+            await ctx.reply(`Старт: ${start_time}, Конец: ${end_time}`)
+            await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: start_time, end_time: end_time })
+            ctx.scene.leave()
+        })
+
+
+
+        const BblockSpace = new Scenes.WizardScene('blockSpaceScene', step1, step2, step3)
+        return BblockSpace;
+    }
 
 
 
