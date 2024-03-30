@@ -1,4 +1,5 @@
 const { Telegraf, Markup, Input } = require('telegraf')
+const moment = require('moment');
 const sequelize = require('../database/database');
 // const Admin = require('../database/AdminModel'); // Модель списка админов
 const Profile = require('../database/ProfilePeer'); // Модель списка админов
@@ -32,6 +33,18 @@ class helperFunction {
     static async doesUserExist(id) {
         const user = await Profile.findOne({ where: { id_tg: id } });
         return user;
+    }
+
+    static async setStartTime(date) {
+        let now = moment();
+        if (moment().format('YYYY-MM-DD') == date)
+            now.minutes(Math.ceil(now.minutes() / 15) * 15)
+        else {
+            now.minutes('00')
+            now.hours('00')
+        }
+        now = now.format('HH:mm')
+        return now;
     }
 }
 

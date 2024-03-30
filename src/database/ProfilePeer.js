@@ -1,6 +1,7 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('./database');
 
+
 const ProfilePeer = sequelize.define('ProfilePeer', {
     id: {
         type: DataTypes.INTEGER.UNSIGNED,
