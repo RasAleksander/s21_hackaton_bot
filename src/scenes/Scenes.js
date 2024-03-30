@@ -11,6 +11,7 @@ const City = require('../database/City');
 const Token = require('../database/TokenPeer');
 
 const helperFunction = require('../functions/helperFunc');
+const SendEmailsFunc = require('../functions/SendEmailsFunc');
 const Calendar = require('telegram-inline-calendar');
 const { startMessages, nicknameMessages } = require('../messages/Messages');
 
@@ -46,11 +47,11 @@ class SceneGenerator {
                 await ctx.reply(nicknameMessages.nicknameMessages);
                 ctx.scene.reenter();
             } else {
+                await SendEmailsFunc.sendEmail(nickname);
                 await ctx.reply(nicknameMessages.correctNickname);
-                await sendEmailsFunction.sendEmail(nickname);
-                const tokenInfo = await Token.findOne({ where: { nickname: 'nickname' } }); 
-                const verifyValue = tokenInfo.verify;
-                console.log(verifyValue)
+                // const tokenInfo = await Token.findOne({ where: { nickname: 'nickname' } });
+                // const verifyValue = tokenInfo.verify;
+                // console.log(verifyValue)
             }
         });
         return nicknameScene;

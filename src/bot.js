@@ -14,9 +14,9 @@ const Room = require('./database/MeetingRoom.js');
 const Visit = require('./database/VisitLog.js');
 const Admin = require('./database/ProfileAdmin.js');
 
-// (async () => {
-//     await sequelize.sync({ alter: true });
-// })();
+(async () => {
+    await sequelize.sync({ alter: true });
+})();
 
 // Файлы
 const helperFunction = require('./functions/helperFunc');
@@ -56,6 +56,10 @@ bot.command('start', async (ctx) => {
 
 bot.command('signup', async (ctx) => {
     ctx.scene.enter(`signupScene`)
+})
+
+bot.command('nickname', async (ctx) => {
+    ctx.scene.enter(`nicknameScene`)
 })
 
 bot.command('cancel', async (ctx) => {
