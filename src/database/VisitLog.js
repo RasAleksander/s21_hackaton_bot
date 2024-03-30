@@ -24,6 +24,11 @@ const VisitLog = sequelize.define('VisitLog', {
             key: 'id'
         }
     },
+    status: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
+    },
     start_time: {
         type: DataTypes.DATE,
         allowNull: false
