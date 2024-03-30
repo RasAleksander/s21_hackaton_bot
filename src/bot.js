@@ -6,12 +6,6 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // База данных и таблицы
 const sequelize = require('./database/database'); // Настройки модели БД
 
-const Profile = require('./database/ProfilePeer');
-const City = require('./database/City');
-const Room = require('./database/MeetingRoom.js');
-const Visit = require('./database/VisitLog.js');
-const Admin = require('./database/ProfileAdmin.js');
-
 // (async () => {
 //     await sequelize.sync({ alter: true });
 // })();
