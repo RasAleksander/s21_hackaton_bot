@@ -69,6 +69,7 @@ bot.command('admin', async (ctx) => {
 
 // bot.command('run', async (ctx) => {
 //     await helperFunction.runScript();
+// await helperFunction.updateStatusAndAddToLimit();
 // })
 
 bot.launch()
@@ -79,6 +80,7 @@ cron.schedule('15,30,45,00 * * * *', async () => {
     if ([0, 15, 30, 45].includes(currentTime.minute())) {
         // В этом моменте времени нужно выполнить задачу
         await helperFunction.runScript();
+        await helperFunction.updateStatusAndAddToLimit();
         console.log('Предупреждения разосланы');
     }
 });

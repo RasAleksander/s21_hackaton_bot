@@ -160,6 +160,31 @@ class helperFunction {
             return `Произошла ошибка: ${error.message}`;
         }
     }
+
+    static async updateStatusAndAddToLimit() {
+        try {
+            // Находим все записи в таблице VisitLog, у которых разница между end_time и текущим временем равна 0 в минутах
+            const currentDateTime = moment();
+            const expiredVisits = await Visit.findAll({
+                where: {
+                    end_time: {
+                        [Sequelize.Op.lte]: currentDateTime.toDate() // Находим записи, у которых end_time меньше или равно текущему времени
+                    }
+                }
+            });
+
+            // Обновляем статус для найденных записей и вызываем функцию addToLimitByVisitId
+            for (const visit of expiredVisits) {
+                visit.status = 2; // Устанавливаем статус 2 (или любой другой, который вам нужен)
+                await visit.save(); // Сохраняем изменения
+                await helperFunction.addToLimitByVisitId(visit.id); // Вызываем функцию для добавления к лимиту
+            }
+
+            return `Успешно обновлено ${expiredVisits.length} записей и добавлено к лимиту`;
+        } catch (error) {
+            return `Произошла ошибка: ${error.message}`;
+        }
+    }
 }
 
 module.exports = helperFunction;
