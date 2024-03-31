@@ -1,15 +1,19 @@
+// Библиотеки и фреймворки
 const { Telegraf, Markup, Input } = require('telegraf')
-const { Sequelize } = require('sequelize');
+const Sequelize = require('sequelize');
 const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
 const moment = require('moment');
 const axios = require('axios');
 require('dotenv').config()
-const sequelize = require('../database/database');
+
+// Таблицы
 const Visit = require('../database/VisitLog.js');
 const Admin = require('../database/ProfileAdmin');
 const Profile = require('../database/ProfilePeer');
 const MeetingRoom = require('../database/MeetingRoom');
+
+
 
 class helperFunction {
     static async doesUserNickname(id) {
@@ -17,7 +21,6 @@ class helperFunction {
         if (user) {
             return user.nickname;
         } else { return user }
-
     }
 
     static async checkQR(ctx, room) {
@@ -59,7 +62,6 @@ class helperFunction {
                 text: message
             };
             const response = await axios.post(url, payload);
-            console.log('Message sent:', response.data);
         } catch (error) {
             console.error('Error sending message:', error.message);
         }
@@ -68,9 +70,10 @@ class helperFunction {
 
     static async runScript() {
 
+        // Установка шага времени проверки
         const currentTime = moment();
         const endTimeThreshold = moment().add(16, 'minutes');
-        const startTimeThreshold = moment().subtract(16, 'minutes'); // Время, наступающее через 15 минут назад
+        const startTimeThreshold = moment().subtract(16, 'minutes');
 
         // Найти все записи, у которых время окончания находится в промежутке между текущим временем и endTimeThreshold
         const bookings = await Visit.findAll({
@@ -108,17 +111,12 @@ class helperFunction {
             }
         });
 
-
         // Отправить сообщение всем пользователям из таблицы Visit
         for (const booking of bookings) {
             const { peer_id } = booking;
-            const profile = await Profile.findOne({ where: { id: peer_id } }); // Найти профиль пользователя по его идентификатору
-            console.log('пирайди' + peer_id)
+            const profile = await Profile.findOne({ where: { id: peer_id } });
             const { id_tg } = profile;
-            console.log('\nТгайди' + id_tg)
             if (profile) {
-                // const { id_tg } = profile;
-                console.log('Зашли в рассылку')
                 const timeDiffMinutes = moment(booking.end_time).diff(currentTime, 'minutes');
                 const message = `Ваше бронирование начинается/заканчивается через ${timeDiffMinutes} минут`;
                 await helperFunction.sendMessage(id_tg, message);
@@ -148,15 +146,12 @@ class helperFunction {
             const start = visit.start_time.getTime();
             const end = visit.end_time.getTime();
             const differenceInMinutes = Math.ceil((end - start) / (1000 * 60));
-
             const user = await Profile.findByPk(visit.peer_id);
             if (!user) {
                 throw new Error('Пользователь с таким peer_id не найден');
             }
-
             user.limit += differenceInMinutes;
             await user.save();
-
             return `Лимит пользователя ${user.nickname} успешно обновлен на ${differenceInMinutes} минут`;
         } catch (error) {
             return `Произошла ошибка: ${error.message}`;
@@ -175,13 +170,12 @@ class helperFunction {
                 }
             });
 
-            // Обновляем статус для найденных записей и вызываем функцию addToLimitByVisitId
+            // Обновляем статус для найденных записей и изменяем лимит времени пользователю
             for (const visit of expiredVisits) {
-                visit.status = 2; // Устанавливаем статус 2 (или любой другой, который вам нужен)
-                await visit.save(); // Сохраняем изменения
-                await helperFunction.addToLimitByVisitId(visit.id); // Вызываем функцию для добавления к лимиту
+                visit.status = 2; // Устанавливаем статус 'проведено'
+                await visit.save();
+                await helperFunction.addToLimitByVisitId(visit.id);
             }
-
             return `Успешно обновлено ${expiredVisits.length} записей и добавлено к лимиту`;
         } catch (error) {
             return `Произошла ошибка: ${error.message}`;
@@ -229,7 +223,6 @@ class helperFunction {
     }
 
     static async drawImage(bookings) {
-
         // const bookings = [
         //     { 'meeting_room_id': 1, 'start_time': '08:00', 'end_time': '08:30' },
         //     { 'meeting_room_id': 2, 'start_time': '09:00', 'end_time': '10:00' },
@@ -239,13 +232,12 @@ class helperFunction {
         //     { 'meeting_room_id': 5, 'start_time': '16:30', 'end_time': '16:15' }
         // ];
 
-        const canvasWidth = 850; // Увеличили ширину для столбца времени
+        const canvasWidth = 850;
         const canvasHeight = 400;
         const canvas = createCanvas(canvasWidth, canvasHeight);
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
         // Рисуем шкалу времени слева
         ctx.fillStyle = 'black';
         ctx.font = '14px Arial';
@@ -258,7 +250,7 @@ class helperFunction {
         ctx.strokeStyle = 'gray';
         ctx.lineWidth = 2;
         for (let room = 0; room < 5; room++) {
-            const x = room * ((canvasWidth - 50) / 5); // Изменили делитель для столбцов
+            const x = room * ((canvasWidth - 50) / 5);
             ctx.beginPath();
             ctx.moveTo(x + 50, 0);
             ctx.lineTo(x + 50, canvasHeight);
@@ -268,7 +260,7 @@ class helperFunction {
         for (let hour = 0; hour <= 24; hour++) {
             const y = (hour / 24) * canvasHeight;
             ctx.beginPath();
-            ctx.moveTo(0, y); // Изменили x координату для столбца времени
+            ctx.moveTo(0, y);
             ctx.lineTo(canvasWidth, y);
             ctx.stroke();
         }
