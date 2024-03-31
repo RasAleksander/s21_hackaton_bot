@@ -48,10 +48,9 @@ class helperFunction {
         return isAdmin;
     }
 
-
     static async sendMessage(id_tg, message) {
         try {
-            const token = process.env.BOT_TOKEN; // Замените на ваш токен бота
+            const token = process.env.BOT_TOKEN;
             const url = `https://api.telegram.org/bot${token}/sendMessage`;
             const payload = {
                 chat_id: id_tg,
@@ -66,28 +65,47 @@ class helperFunction {
     }
 
     static async runScript() {
-        // Найти текущее время и время, которое наступит через 59 минут
+
         const currentTime = moment();
-        const endTimeThreshold = moment().add(15, 'minutes');
+        const endTimeThreshold = moment().add(16, 'minutes');
+        const startTimeThreshold = moment().subtract(16, 'minutes'); // Время, наступающее через 15 минут назад
 
         // Найти все записи, у которых время окончания находится в промежутке между текущим временем и endTimeThreshold
         const bookings = await Visit.findAll({
             where: {
                 [Sequelize.Op.and]: [
                     {
-                        end_time: {
-                            [Sequelize.Op.lte]: endTimeThreshold.toDate() // Найти записи, где end_time меньше или равно времени, через 59 минут
-                        }
-
+                        [Sequelize.Op.or]: [
+                            {
+                                end_time: {
+                                    [Sequelize.Op.lte]: endTimeThreshold.toDate()
+                                }
+                            },
+                            {
+                                start_time: {
+                                    [Sequelize.Op.lte]: startTimeThreshold.toDate()
+                                }
+                            }
+                        ]
                     },
                     {
-                        end_time: {
-                            [Sequelize.Op.gte]: currentTime.toDate() // И одновременно больше или равно текущему времени
-                        }
+                        [Sequelize.Op.or]: [
+                            {
+                                end_time: {
+                                    [Sequelize.Op.gte]: currentTime.toDate()
+                                }
+                            },
+                            {
+                                start_time: {
+                                    [Sequelize.Op.gte]: currentTime.toDate()
+                                }
+                            }
+                        ]
                     }
                 ]
             }
         });
+
 
         // Отправить сообщение всем пользователям из таблицы Visit
         for (const booking of bookings) {
@@ -100,7 +118,7 @@ class helperFunction {
                 // const { id_tg } = profile;
                 console.log('Зашли в рассылку')
                 const timeDiffMinutes = moment(booking.end_time).diff(currentTime, 'minutes');
-                const message = `Ваше бронирование заканчивается через ${timeDiffMinutes} минут`;
+                const message = `Ваше бронирование начинается/заканчивается через ${timeDiffMinutes} минут`;
                 await helperFunction.sendMessage(id_tg, message);
             }
         }
@@ -116,6 +134,31 @@ class helperFunction {
         }
         now = now.format('HH:mm')
         return now;
+    }
+
+    static async addToLimitByVisitId(visitId) {
+        try {
+            // Находим запись в таблице VisitLog по id
+            const visit = await Visit.findByPk(visitId);
+            if (!visit) {
+                throw new Error('Запись с таким id не найдена');
+            }
+            const start = visit.start_time.getTime();
+            const end = visit.end_time.getTime();
+            const differenceInMinutes = Math.ceil((end - start) / (1000 * 60));
+
+            const user = await Profile.findByPk(visit.peer_id);
+            if (!user) {
+                throw new Error('Пользователь с таким peer_id не найден');
+            }
+
+            user.limit += differenceInMinutes;
+            await user.save();
+
+            return `Лимит пользователя ${user.nickname} успешно обновлен на ${differenceInMinutes} минут`;
+        } catch (error) {
+            return `Произошла ошибка: ${error.message}`;
+        }
     }
 }
 

@@ -75,13 +75,11 @@ bot.launch()
 
 // Запуск cron-задачи в 00, 15, 30 и 45 минут каждого часа
 cron.schedule('15,30,45,00 * * * *', async () => {
-    // Получаем текущее время
     const currentTime = moment();
-    // Проверяем, нужно ли выполнить задачу в текущий момент времени
     if ([0, 15, 30, 45].includes(currentTime.minute())) {
         // В этом моменте времени нужно выполнить задачу
         await helperFunction.runScript();
-        console.log('Script executed');
+        console.log('Предупреждения разосланы');
     }
 });
 

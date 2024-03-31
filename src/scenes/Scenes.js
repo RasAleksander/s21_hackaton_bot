@@ -234,7 +234,7 @@ class SceneGenerator {
         });
 
         bookingsScene.on('callback_query', async (ctx) => {
-            const bookingId = ctx.callbackQuery.data; // Указываем ctx перед callbackQuery
+            const bookingId = ctx.callbackQuery.data;
             const booking = await Visit.findOne({
                 where: {
                     id: bookingId,
@@ -243,7 +243,8 @@ class SceneGenerator {
             if (!booking) {
                 await ctx.reply('Бронь не найдена.');
             } else {
-                await booking.update({ status: 3 }); // обновляем статус на "отменено"
+                await booking.update({ status: 3 });
+                await helperFunction.addToLimitByVisitId(bookingId)
                 await ctx.reply('Бронь успешно отменена.');
             }
 
