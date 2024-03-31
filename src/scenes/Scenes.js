@@ -207,10 +207,7 @@ class SceneGenerator {
             ctx.scene.leave()
         })
 
-
-
         const signup = new Scenes.WizardScene('signupScene', step1, step2, step3, step4, step5)
-        // signup.hears('Back', goBackToStep1);
         return signup;
     }
 
@@ -364,83 +361,65 @@ class SceneGenerator {
         return newSpaceScene
     }
 
-    blockSpaceScene() {// Создаем шаг выбора типа игры
+    blockSpaceScene() {
         const step2 = new Composer()
         const step3 = new Composer()
         const step4 = new Composer()
-        let calendar, user;
-        let date, start_time;
+        let calendar, admin;
         let delete_msg;
 
         const step1 = async (ctx) => {
-            user = await helperFunction.doesUserExist(ctx.from.id)
-            if (!user) {
+            admin = await helperFunction.doesAdminExist(ctx.from.id)
+            if (!admin) {
                 await ctx.reply(signupMessages.notUser);
                 return ctx.scene.leave();
             } else {
                 calendar = new Calendar(ctx, {
-                    date_format: 'YYYY-MM-DD',
+                    date_format: 'YYYY-MM-DD HH:mm',
                     language: 'ru',
                     start_week_day: 1,
                     bot_api: "telegraf",
                     start_date: 'now',
+                    time_selector_mod: true,
+                    time_range: "00:00-23:59",
+                    time_step: "15m",
+                    custom_start_msg: 'Выберите время и дату'
                 });
                 calendar.startNavCalendar(ctx);
                 return ctx.wizard.next();
             }
         };
 
-        // Шаг выбора игры
+
+        let start_date;
         step2.on('callback_query', async (ctx) => {
             if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-                date = await calendar.clickButtonCalendar(ctx.callbackQuery);
-                if (date !== -1) {
-                    delete_msg = await ctx.reply(`Вы выбрали ${date}`, {
-                        reply_markup: {
-                            inline_keyboard: [
-                                [{ text: 'Назад', callback_data: 'Back' }],
-                            ],
-                            one_time_keyboard: true,
-                        },
-                    });
+                start_date = await calendar.clickButtonCalendar(ctx.callbackQuery);
+                if (start_date !== -1) {
 
-                    const start = await helperFunction.setStartTime(date)
-                    calendar = new Calendar(ctx, {
-                        date_format: 'HH:mm',
-                        language: 'ru',
-                        bot_api: "telegraf",
-                        time_range: start + "-23:59",
-                        time_step: "15m",
-                        custom_start_msg: 'Выберите время'
-                    });
-
-                    calendar.startTimeSelector(ctx);
+                    delete_msg = await ctx.reply(`Вы выбрали начало диапазона ${start_date}. Выберите конец диапазона`);
+                    calendar.startNavCalendar(ctx);
                     return ctx.wizard.next();
-
                 }
             }
         });
 
-        step3.on('callback_query', (ctx) => {
-            if (ctx.callbackQuery.data == 'Back') {
-                ctx.deleteMessage(delete_msg.message_id);
-                ctx.deleteMessage(calendar.chats.get(ctx.callbackQuery.message.chat.id));
-                ctx.scene.reenter()
-            }
+        let end_date;
+        step3.on('callback_query', async (ctx) => {
             if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-                start_time = calendar.clickButtonCalendar(ctx.callbackQuery);
-                if (start_time !== -1) {
-                    ctx.deleteMessage(delete_msg.message_id);
-                    ctx.reply("You selected: " + date + ' ' + start_time + '\n На сколько времени вы хотите забронировать комнату?', {
+                end_date = calendar.clickButtonCalendar(ctx.callbackQuery);
+                if (end_date !== -1) {
+                    await ctx.deleteMessage(delete_msg.message_id);
+                    const rooms = await Room.findAll();
+                    const inlineKeyboard = rooms.map(room => [{
+                        text: room.name,
+                        callback_data: `${room.id}`,
+                    }]);
+                    delete_msg = await ctx.reply(`Начало диапазона ${start_date}\nКонец диапазона ${end_date}. Выберите переговорку, которую хотите заблокировать`, {
                         reply_markup: {
-                            inline_keyboard: [
-                                [{ text: '15 мин', callback_data: 15 },
-                                { text: '30 мин', callback_data: 30 },
-                                { text: '45 мин', callback_data: 45 },
-                                { text: '60 мин', callback_data: 60 }]
-                            ],
+                            inline_keyboard: inlineKeyboard,
                             one_time_keyboard: true,
-                        }
+                        },
                     });
                     return ctx.wizard.next();
                 }
@@ -448,12 +427,9 @@ class SceneGenerator {
         });
 
         step4.on('callback_query', async (ctx) => {
-            start_time = moment(date + ' ' + start_time)
-            let end_time = moment(start_time)
-            end_time.add(parseInt(ctx.callbackQuery.data, 10), 'minutes')
-            await ctx.reply(`Старт: ${start_time}, Конец: ${end_time}`)
-            // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: end_time })
-            await Visit.create({ meeting_room_id: 1, peer_id: user.id, start_time: start_time, end_time: end_time, })
+            let room = ctx.callbackQuery.data
+            await ctx.editMessageText(`Вы заблокировали комнату ${room}\n c: ${start_date}\n до: ${end_date}`)
+            await Visit.create({ meeting_room_id: 1, peer_id: admin.id, status: 4, start_time: start_date, end_time: end_date, })
             ctx.scene.leave()
         })
 
