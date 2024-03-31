@@ -5,9 +5,9 @@ const axios = require('axios');
 require('dotenv').config()
 const sequelize = require('../database/database');
 const Visit = require('../database/VisitLog.js');
-// const Admin = require('../database/AdminModel'); // Модель списка админов
-const Profile = require('../database/ProfilePeer'); // Модель списка админов
-const MeetingRoom = require('../database/MeetingRoom'); // Модель списка админов
+const Admin = require('../database/ProfileAdmin');
+const Profile = require('../database/ProfilePeer');
+const MeetingRoom = require('../database/MeetingRoom');
 
 class helperFunction {
     static async doesUserNickname(id) {
@@ -38,6 +38,16 @@ class helperFunction {
         const user = await Profile.findOne({ where: { id_tg: id } });
         return user;
     }
+
+    static async doesAdminExist(id) {
+        const user = await Profile.findOne({ where: { id_tg: id } });
+        if (!user) {
+            return false;
+        }
+        const isAdmin = await Admin.findOne({ where: { peer_id: user.id } });
+        return isAdmin;
+    }
+
 
     static async sendMessage(id_tg, message) {
         try {

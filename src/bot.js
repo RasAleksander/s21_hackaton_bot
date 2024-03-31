@@ -23,11 +23,12 @@ const createScene = new SceneGenerator()
 const startScene = createScene.startScene()
 const nicknameScene = createScene.nicknameScene()
 const signupScene = createScene.signupScene()
-const cancelScene = createScene.cancelScene()
+const bookingsScene = createScene.bookingsScene()
 const adminScene = createScene.adminScene()
 const newSpaceScene = createScene.newSpaceScene()
 const blockSpaceScene = createScene.blockSpaceScene()
-const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, cancelScene, adminScene, newSpaceScene, blockSpaceScene])
+const addAdminScene = createScene.addAdminScene()
+const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, bookingsScene, adminScene, newSpaceScene, blockSpaceScene, addAdminScene])
 
 
 // Команды без диалога
@@ -53,17 +54,22 @@ bot.command('signup', async (ctx) => {
     ctx.scene.enter(`signupScene`)
 })
 
-bot.command('cancel', async (ctx) => {
-    ctx.scene.enter(`cancelScene`)
+bot.command('bookings', async (ctx) => {
+    ctx.scene.enter(`bookingsScene`)
 })
 
 bot.command('admin', async (ctx) => {
-    ctx.scene.enter(`adminScene`)
+    if (await helperFunction.doesAdminExist(ctx.from.id)) {
+        ctx.scene.enter(`adminScene`)
+    }
+    else {
+        ctx.reply('Вы не администратор')
+    }
 })
 
-bot.command('run', async (ctx) => {
-    await helperFunction.runScript();
-})
+// bot.command('run', async (ctx) => {
+//     await helperFunction.runScript();
+// })
 
 bot.launch()
 

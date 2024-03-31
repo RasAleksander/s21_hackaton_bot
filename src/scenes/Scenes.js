@@ -5,6 +5,7 @@ const moment = require('moment');
 
 const sequelize = require('../database/database');
 const Profile = require('../database/ProfilePeer');
+const Admin = require('../database/ProfileAdmin');
 const Visit = require('../database/VisitLog.js');
 const Room = require('../database/MeetingRoom.js');
 const City = require('../database/City');
@@ -37,8 +38,6 @@ class SceneGenerator {
 
         return start
     }
-
-
     //Выбор никнейма
     nicknameScene() {
         let userExists = null;
@@ -191,9 +190,9 @@ class SceneGenerator {
     }
 
 
-    cancelScene() {
-        const cancelScene = new Scenes.BaseScene('cancelScene');
-        cancelScene.enter(async (ctx) => {
+    bookingsScene() {
+        const bookingsScene = new Scenes.BaseScene('bookingsScene');
+        bookingsScene.enter(async (ctx) => {
             const profile = await Profile.findOne({
                 where: {
                     id_tg: ctx.from.id
@@ -234,7 +233,7 @@ class SceneGenerator {
             // return ctx.scene.leave();
         });
 
-        cancelScene.on('callback_query', async (ctx) => {
+        bookingsScene.on('callback_query', async (ctx) => {
             const bookingId = ctx.callbackQuery.data; // Указываем ctx перед callbackQuery
             const booking = await Visit.findOne({
                 where: {
@@ -251,7 +250,7 @@ class SceneGenerator {
             return ctx.scene.leave();
         });
 
-        return cancelScene;
+        return bookingsScene;
     }
 
     adminScene() {
@@ -264,7 +263,8 @@ class SceneGenerator {
                     inline_keyboard: [
                         [{ text: 'Добавить новое пространство', callback_data: 'New_Space' }],
                         [{ text: 'Заблокировать пространство', callback_data: 'Block_Space' }],
-                        [{ text: 'Разблокировать пространство', callback_data: 'Unblock_Space' }]
+                        [{ text: 'Разблокировать пространство', callback_data: 'Unblock_Space' }],
+                        [{ text: 'Добавить администратора', callback_data: 'Add_Admin' }]
                     ],
                     one_time_keyboard: true,
                 },
@@ -277,6 +277,9 @@ class SceneGenerator {
             switch (chosenAction) {
                 case 'New_Space':
                     ctx.scene.enter('newSpaceScene');
+                    break;
+                case 'Add_Admin':
+                    ctx.scene.enter('addAdminScene');
                     break;
                 case 'Block_Space':
                     ctx.scene.enter('blockSpaceScene');
@@ -434,7 +437,41 @@ class SceneGenerator {
         return blockSpaceScene;
     }
 
+    addAdminScene() {
+        const addAdminScene = new Scenes.BaseScene('addAdminScene');
+        addAdminScene.enter(async (ctx) => {
+            await ctx.reply('Введите никнейм пользователя:');
+        })
+        addAdminScene.on('message', async (ctx) => {
 
+            const nickname = ctx.message.text.trim();
+
+            // Проверяем, существует ли такой никнейм в таблице ProfilePeer
+            const profilePeer = await Profile.findOne({ where: { nickname } });
+
+            if (!profilePeer) {
+                await ctx.reply('Пользователь с таким никнеймом не найден.');
+                return ctx.scene.leave();
+            }
+
+            // Проверяем, существует ли уже администратор с таким же peer_id
+            const existingAdmin = await Admin.findOne({ where: { peer_id: profilePeer.id } });
+
+            if (existingAdmin) {
+                await ctx.reply('Этот пользователь уже является администратором.');
+                return ctx.scene.leave();
+            }
+
+            // Создаем новую запись в таблице ProfileAdmin
+            await Admin.create({ peer_id: profilePeer.id });
+
+            await ctx.reply(`Пользователь "${nickname}" успешно добавлен в администраторы.`);
+
+            return ctx.scene.leave();
+
+        })
+        return addAdminScene
+    }
 
 
 
