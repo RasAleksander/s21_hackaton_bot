@@ -27,7 +27,6 @@ class SceneGenerator {
         const start = new Scenes.BaseScene('startScene')
 
         start.enter(async (ctx) => {
-            // await Room.create({ name: 'Infinity', description: 'Ближайшая переговорка', floor: 20 })
             const userExists = await helperFunction.doesUserNickname(ctx.from.id);
             if (userExists) {
                 await ctx.reply(startMessages.old_gamer + ` ${userExists}?`)
