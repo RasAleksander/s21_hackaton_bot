@@ -18,6 +18,8 @@ const helperFunction = require('../functions/helperFunc');
 const { startMessages, nicknameMessages } = require('../messages/Messages');
 
 
+
+
 class SceneGenerator {
 
     // Сцены для пользователя
@@ -46,9 +48,9 @@ class SceneGenerator {
             // проверка существует ли пользователь
             userExists = await helperFunction.doesUserNickname(ctx.from.id);
             if (userExists) {
-                await ctx.reply(nicknameMessages.list);
+                await ctx.reply(greetingUnsignedPeer.greetingNewPeer);
             } else {
-                await ctx.reply(nicknameMessages.new_gamer);
+                await ctx.reply(greetingUnsignedPeer.exception);
             }
         });
         nicknameScene.on('message', async (ctx) => {
@@ -57,11 +59,11 @@ class SceneGenerator {
 
             // Некорректное имя
             if (!nicknameReg.test(nickname)) {
-                await ctx.reply(nicknameMessages.wrong_nickname);
+                await ctx.reply(nicknameMessages.wrongNickname);
                 ctx.scene.reenter();
             } else {
                 // Корректное имя
-                await ctx.reply(`${nicknameMessages.good_nickname} ${nickname}`);
+                await ctx.reply(`${nicknameMessages.correctNickname} ${nickname}`);
                 if (userExists) {
                     // если пользователь существует обновляем имя
                     await Profile.update({ nickname: nickname, username_tg: ctx.from.username }, { where: { id_tg: ctx.from.id } })
