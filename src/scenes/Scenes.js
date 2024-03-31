@@ -1,21 +1,21 @@
+// Библиотеки и фреймворки
 const { Scenes, WizardScene, Composer } = require('telegraf');
+const { Sequelize, DataTypes } = require('sequelize');
 const { Markup } = require('telegraf');
 const moment = require('moment');
+const Calendar = require('telegram-inline-calendar');
 
 
-const sequelize = require('../database/database');
+// Таблицы
 const Profile = require('../database/ProfilePeer');
 const Admin = require('../database/ProfileAdmin');
 const Visit = require('../database/VisitLog.js');
 const Room = require('../database/MeetingRoom.js');
-const City = require('../database/City');
 
+
+// Файлы
 const helperFunction = require('../functions/helperFunc');
-const Calendar = require('telegram-inline-calendar');
 const { startMessages, nicknameMessages } = require('../messages/Messages');
-const { Sequelize, DataTypes } = require('sequelize');
-const { log } = require('forever');
-
 
 
 class SceneGenerator {

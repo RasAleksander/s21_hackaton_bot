@@ -1,12 +1,11 @@
 // Библиотеки
 const { Telegraf, session, Stage, Scenes, Markup } = require('telegraf');
 require('dotenv').config()
-const bot = new Telegraf(process.env.BOT_TOKEN);
 const cron = require('node-cron');
 const moment = require('moment');
 
-// База данных и таблицы
-const sequelize = require('./database/database'); // Настройки модели БД
+
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // (async () => {
 //     await sequelize.sync({ alter: true });
@@ -30,10 +29,6 @@ const blockSpaceScene = createScene.blockSpaceScene()
 const addAdminScene = createScene.addAdminScene()
 const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, bookingsScene, adminScene, newSpaceScene, blockSpaceScene, addAdminScene])
 
-
-// Команды без диалога
-const { voteMessage } = require('./messages/Messages.js');
-const { help } = require('forever/lib/forever/cli.js');
 
 bot.use(session());
 bot.use(stage.middleware())
