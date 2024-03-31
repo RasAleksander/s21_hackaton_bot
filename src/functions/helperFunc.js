@@ -124,18 +124,6 @@ class helperFunction {
         }
     }
 
-    static async setStartTime(date) {
-        let now = moment();
-        if (moment().format('YYYY-MM-DD') == date)
-            now.minutes(Math.ceil(now.minutes() / 15) * 15)
-        else {
-            now.minutes('00')
-            now.hours('00')
-        }
-        now = now.format('HH:mm')
-        return now;
-    }
-
     static async addToLimitByVisitId(visitId) {
         try {
             // Находим запись в таблице VisitLog по id
@@ -150,13 +138,19 @@ class helperFunction {
             if (!user) {
                 throw new Error('Пользователь с таким peer_id не найден');
             }
+            // Добавляем количество минут к лимиту пользователя
             user.limit += differenceInMinutes;
+            if (user.limit > 60) {
+                user.limit = 60;
+            }
             await user.save();
-            return `Лимит пользователя ${user.nickname} успешно обновлен на ${differenceInMinutes} минут`;
+            // Возвращаем сообщение об успешном обновлении лимита пользователя с указанием имени пользователя и количества добавленных минут
+            return `Лимит пользователя ${user.nickname} успешно обновлен на ${user.limit} минут`;
         } catch (error) {
             return `Произошла ошибка: ${error.message}`;
         }
     }
+
 
     static async updateStatusAndAddToLimit() {
         try {
@@ -164,9 +158,16 @@ class helperFunction {
             const currentDateTime = moment();
             const expiredVisits = await Visit.findAll({
                 where: {
-                    end_time: {
-                        [Sequelize.Op.lte]: currentDateTime.toDate() // Находим записи, у которых end_time меньше или равно текущему времени
-                    }
+                    [Sequelize.Op.and]: [
+                        {
+                            end_time: {
+                                [Sequelize.Op.lte]: currentDateTime.toDate() // Находим записи, у которых end_time меньше или равно текущему времени
+                            }
+                        },
+                        {
+                            status: 1
+                        }
+                    ]
                 }
             });
 
@@ -182,22 +183,44 @@ class helperFunction {
         }
     }
 
-    static async getAvailableRange(visits) {
+    static async setStartTime(date) {
+        let now = moment();
+        if (moment().format('YYYY-MM-DD') == date)
+            now.minutes(Math.ceil(now.minutes() / 15) * 15)
+        else {
+            now.minutes('00')
+            now.hours('00')
+        }
+        now = now.format('HH:mm')
+        return now;
+    }
+
+    static async getAvailableRange(selected_room, selected_date,) {
+        const visits = await Visit.findAll({
+            where: {
+                meeting_room_id: selected_room,
+                start_time: {
+                    [Sequelize.Op.between]: [moment(selected_date), moment(selected_date).add(1, 'days')]
+                }
+            },
+            attributes: ['start_time', 'end_time'], // Указываем имена атрибутов в виде строковых значений
+            order: [['start_time', 'ASC']]
+        });
         let timeRanges = []
         let str = 'Доступные диапазоны:\n'
+
         for (let i = 0; i <= visits.length; i++) {
             let start = [0, 0]
             let end = [23, 59]
-            if (i == 0 || i == visits.length) {
+            if (visits.length) {
                 if (i == 0) {
                     end = moment(visits[i].dataValues.start_time).format('HH:mm').split(':').map(Number);
-                }
-                if (i == visits.length) {
+                } else if (i == visits.length) {
                     start = moment(visits[i - 1].dataValues.end_time).format('HH:mm').split(':').map(Number);
+                } else {
+                    start = moment(visits[i - 1].dataValues.end_time).format('HH:mm').split(':').map(Number);
+                    end = moment(visits[i].dataValues.start_time).format('HH:mm').split(':').map(Number);
                 }
-            } else {
-                start = moment(visits[i - 1].dataValues.end_time).format('HH:mm').split(':').map(Number);
-                end = moment(visits[i].dataValues.start_time).format('HH:mm').split(':').map(Number);
             }
             if (!(start[0] == end[0] && start[1] == end[1])) {
                 str += start[0] + ':' + start[1] + '-' + end[0] + ':' + end[1] + '\n'
@@ -223,16 +246,8 @@ class helperFunction {
     }
 
     static async drawImage(bookings) {
-        // const bookings = [
-        //     { 'meeting_room_id': 1, 'start_time': '08:00', 'end_time': '08:30' },
-        //     { 'meeting_room_id': 2, 'start_time': '09:00', 'end_time': '10:00' },
-        //     { 'meeting_room_id': 3, 'start_time': '10:00', 'end_time': '11:45' },
-        //     { 'meeting_room_id': 4, 'start_time': '13:45', 'end_time': '14:15' },
-        //     { 'meeting_room_id': 5, 'start_time': '14:00', 'end_time': '15:00' },
-        //     { 'meeting_room_id': 5, 'start_time': '16:30', 'end_time': '16:15' }
-        // ];
 
-        const canvasWidth = 850;
+        const canvasWidth = 850; // Увеличили ширину для столбца времени
         const canvasHeight = 400;
         const canvas = createCanvas(canvasWidth, canvasHeight);
         const ctx = canvas.getContext('2d');

@@ -3,17 +3,19 @@ const { Telegraf, session, Stage, Scenes, Markup } = require('telegraf');
 require('dotenv').config()
 const cron = require('node-cron');
 const moment = require('moment');
+const sequelize = require('./database/database'); // Настройки модели БД
 
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+// Раскомментировать для быстрой инициализации всех таблиц
 // (async () => {
 //     await sequelize.sync({ alter: true });
 // })();
 
 // Файлы
 const helperFunction = require('./functions/helperFunc');
-const { dialoguesMessages } = require('../messages/Messages');
+const { dialoguesMessages } = require('./messages/Messages');
 
 
 // Сцены
