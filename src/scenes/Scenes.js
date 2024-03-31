@@ -71,7 +71,9 @@ class SceneGenerator {
                 const username = ctx.from.username || 'default_username';
                 await Profile.create({ id_tg: ctx.from.id, tg_peername: username, nickname: nickname, city_id: 1, limit: 60 })
                 await ctx.reply(`${nicknameMessages.correctNickname} ${nickname}`);
+                ctx.scene.leave();
             }
+            ctx.scene.leave();
         });
         return nicknameScene;
     }
