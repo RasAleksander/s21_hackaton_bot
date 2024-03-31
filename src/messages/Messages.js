@@ -3,7 +3,6 @@ const greetingSignedupPeer = {
     exception: 'Прости пир, но такого я не умею, выбери что-нибудь из списка ниже.'
 };
 
-
 const greetingUnsignedPeer = {
     greetingNewPeer: 'Приветствую тебя новый пир! Предлагаю тебе зарегистрироваться, чтобы продолжить наше общение.',
     exception: 'Чтобы начать пользоваться ботом, нужно зарегистрироваться!'
@@ -21,7 +20,6 @@ const signupMessages = {
     peerAlreadyExists: 'Такой пользователь уже зарегистрирован!'
 };
 
-
 const dialoguesMessages = {
     actions: [
         '1-Посмотреть забронированные переговорки',
@@ -37,6 +35,9 @@ const dialoguesMessages = {
     chooseEndTime: 'Выберите время окончания бронирования',
     successfulBooking: 'Переговорка успешно забронирована!',
     confirmCancel: 'Точно ли хотите отменить бронь? (Да/Нет)',
+    noActiveBookings: 'У вас нет активных броней!',
+    chooseBookingForCancel: 'Выберите бронь, которую хотите отменить:',
+    bookingNotFound: 'Бронь не найдена!',
     cancelSuccess: 'Бронь успешно отменена!',
     showRules: 'Вот правила бронирования и использования переговорки:',
     rulesList: [
@@ -55,7 +56,6 @@ const dialoguesMessages = {
     ]
 };
 
-
 const extensionBooking = {
     beforeStart: 'У вас стоит бронь на переговорку!',
     bookingBegin: 'Бронь началась, пожалуйста отсканируйте QR код для подтверждения!',
@@ -71,9 +71,13 @@ const adminMessages = {
     greetingAdmin: 'Приветствую тебя админ, чем я могу тебе помочь?',
     greetingSuperAdmin: 'Приветствую тебя супер-админ, чем я могу тебе помочь?',
     addAdminMessage: 'Кого бы вы хотели добавить как админа?',
+    adminAlreadyExists: 'Этот пользователь уже является администратором!',
+    superAdminAlreadyExists: 'Этот пользователь уже является супер-администратором!',
     addSuperAdminMessage: 'Кого бы вы хотели добавить как супер-админа?',
     adminWasAdded: 'Пользователь успешно добавлен в группу админов!',
     superAdminWasAdded: 'Пользователь успешно добавлен в группу супер-админов!',
+    addPeerNickname: 'Введите никнейм пользователя:',
+    peerNotFound: 'Пользователь с таким никнеймом не найден!',
     applyPeerBlock: 'Вы уверены что хотите заблокировать пользователя?',
     blockPeerMessage: 'Пользователь был успешно заблокирован!',
     blockBookingByAdmin: 'Какие переговорки вы бы хотели заблокировать?',
@@ -83,6 +87,13 @@ const adminMessages = {
     blockOneBookingMessage: 'Вы успешно заблокировали переговорку'
 };
 
+const addNewSpace = {
+    addNewSpaceName: 'Введите название нового пространства:',
+    addNewSpaceDescription: 'Введите описание нового пространства:',
+    addNewSpaceFloor: 'Введите этаж нового пространства:',
+    addNewSpaceError: 'Ошибка при создании пространства ',
+    newSpaceError: 'Произошла ошибка при создании пространства. Пожалуйста, попробуйте еще раз.'
+};
 
 module.exports = {
     greetingSignedupPeer,
@@ -91,5 +102,6 @@ module.exports = {
     signupMessages,
     dialoguesMessages,
     extensionBooking,
-    adminMessages
+    adminMessages,
+    addNewSpace
 }

@@ -1,21 +1,23 @@
 
+// Библиотеки и фреймворки
 const { Scenes, WizardScene, Composer } = require('telegraf');
+const { Sequelize, DataTypes } = require('sequelize');
 const { Markup } = require('telegraf');
 const moment = require('moment');
+const Calendar = require('telegram-inline-calendar');
 
 
-const sequelize = require('../database/database');
+// Таблицы
 const Profile = require('../database/ProfilePeer');
 const Admin = require('../database/ProfileAdmin');
 const Visit = require('../database/VisitLog.js');
 const Room = require('../database/MeetingRoom.js');
-const City = require('../database/City');
 
+
+// Файлы
 const helperFunction = require('../functions/helperFunc');
-const Calendar = require('telegram-inline-calendar');
-const { startMessages, nicknameMessages } = require('../messages/Messages');
-const { Sequelize, DataTypes } = require('sequelize');
-const { log } = require('forever');
+const { startMessages, nicknameMessages, adminMessages, dialoguesMessages, addNewSpace } = require('../messages/Messages');
+
 
 
 
@@ -26,7 +28,6 @@ class SceneGenerator {
         const start = new Scenes.BaseScene('startScene')
 
         start.enter(async (ctx) => {
-            // await Room.create({ name: 'Infinity', description: 'Ближайшая переговорка', floor: 20 })
             const userExists = await helperFunction.doesUserNickname(ctx.from.id);
             if (userExists) {
                 await ctx.reply(startMessages.old_gamer + ` ${userExists}?`)
@@ -84,8 +85,9 @@ class SceneGenerator {
         const step2 = new Composer()
         const step3 = new Composer()
         const step4 = new Composer()
+        const step5 = new Composer()
         let calendar, user;
-        let date, start_time;
+        let selected_date, start_time;
         let delete_msg;
 
         const step1 = async (ctx) => {
@@ -109,83 +111,115 @@ class SceneGenerator {
         // Шаг выбора игры
         step2.on('callback_query', async (ctx) => {
             if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-                date = await calendar.clickButtonCalendar(ctx.callbackQuery);
-                if (date !== -1) {
-                    let start_date = moment(date), end_date = moment(date).add(1, 'days');
+                selected_date = await calendar.clickButtonCalendar(ctx.callbackQuery);
+                if (selected_date !== -1) {
                     const visits = await Visit.findAll({
                         where: {
                             start_time: {
-                                [Sequelize.Op.between]: [start_date, end_date]
+                                [Sequelize.Op.between]: [moment(selected_date), moment(selected_date).add(1, 'days')]
                             }
                         }
                     });
-
-                    delete_msg = await ctx.reply(`Вы выбрали ${date}`, {
+                    await helperFunction.drawImage(visits);
+                    delete_msg = await ctx.reply(`Вы выбрали ${selected_date}. Выберите переговорку`, {
                         reply_markup: {
                             inline_keyboard: [
-                                [{ text: 'Назад', callback_data: 'Back' }],
+                                [{ text: 'Переговорка 1', callback_data: '1' },
+                                { text: 'Переговорка 2', callback_data: '2' },
+                                { text: 'Переговорка 3', callback_data: '3' }],
+                                [{ text: 'Переговорка 4', callback_data: '4' },
+                                { text: 'Переговорка 5', callback_data: '5' },
+                                { text: 'Назад', callback_data: 'Back' }],
                             ],
                             one_time_keyboard: true,
                         },
                     });
-
-                    const start = await helperFunction.setStartTime(date)
-                    calendar = new Calendar(ctx, {
-                        date_format: 'HH:mm',
-                        language: 'ru',
-                        bot_api: "telegraf",
-                        time_range: start + "-23:59",
-                        time_step: "15m",
-                        custom_start_msg: 'Выберите время'
-                    });
-
-                    calendar.startTimeSelector(ctx);
                     return ctx.wizard.next();
 
                 }
             }
         });
 
-        step3.on('callback_query', (ctx) => {
+        let [str, time_ranges] = [];
+        let selected_room;
+        step3.on('callback_query', async (ctx) => {
+            ctx.deleteMessage(delete_msg.message_id);
             if (ctx.callbackQuery.data == 'Back') {
-                ctx.deleteMessage(delete_msg.message_id);
-                ctx.deleteMessage(calendar.chats.get(ctx.callbackQuery.message.chat.id));
                 ctx.scene.reenter()
-            }
-            if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
-                start_time = calendar.clickButtonCalendar(ctx.callbackQuery);
-                if (start_time !== -1) {
-                    ctx.deleteMessage(delete_msg.message_id);
-                    ctx.reply("You selected: " + date + ' ' + start_time + '\n На сколько времени вы хотите забронировать комнату?', {
-                        reply_markup: {
-                            inline_keyboard: [
-                                [{ text: '15 мин', callback_data: 15 },
-                                { text: '30 мин', callback_data: 30 },
-                                { text: '45 мин', callback_data: 45 },
-                                { text: '60 мин', callback_data: 60 }]
-                            ],
-                            one_time_keyboard: true,
+            } else {
+                selected_room = ctx.callbackQuery.data;
+                const visits = await Visit.findAll({
+                    where: {
+                        meeting_room_id: selected_room,
+                        start_time: {
+                            [Sequelize.Op.between]: [moment(selected_date), moment(selected_date).add(1, 'days')]
                         }
-                    });
-                    return ctx.wizard.next();
+                    },
+                    attributes: ['start_time', 'end_time'], // Указываем имена атрибутов в виде строковых значений
+                    order: [['start_time', 'ASC']]
+                });
+                if (visits.length) {
+
+                    [str, time_ranges] = await helperFunction.getAvailableRange(visits);
                 }
+
+                const start = await helperFunction.setStartTime(selected_date)
+                calendar = new Calendar(ctx, {
+                    date_format: 'HH:mm',
+                    language: 'ru',
+                    bot_api: "telegraf",
+                    time_range: start + "-23:59",
+                    time_step: "15m",
+                    custom_start_msg: str + 'Выберите время:'
+                });
+
+                calendar.startTimeSelector(ctx);
             }
+            return ctx.wizard.next();
         });
+
 
         step4.on('callback_query', async (ctx) => {
 
-            start_time = moment(date + ' ' + start_time)
+            if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
+                start_time = calendar.clickButtonCalendar(ctx.callbackQuery);
+                if (start_time !== -1) {
+                    let check = await helperFunction.checkTimeRange(time_ranges, start_time);
+                    if (!check) {
+                        delete_msg = await ctx.reply("Выбери другое время:")
+                        calendar.startTimeSelector(ctx);
+                        return
+                    } else {
+                        // if (delete_msg.message_id) ctx.deleteMessage(delete_msg.message_id)
+                        ctx.reply("Вы выбрали: " + selected_date + ' ' + start_time + '\n На сколько времени вы хотите забронировать комнату?', {
+                            reply_markup: {
+                                inline_keyboard: [
+                                    [{ text: '15 мин', callback_data: 15 },
+                                    { text: '30 мин', callback_data: 30 },
+                                    { text: '45 мин', callback_data: 45 },
+                                    { text: '60 мин', callback_data: 60 }]
+                                ],
+                                one_time_keyboard: true,
+                            }
+                        });
+                        return ctx.wizard.next();
+                    }
+                }
+            }
+        });
+
+        step5.on('callback_query', async (ctx) => {
+            start_time = moment(selected_date + ' ' + start_time)
             let end_time = moment(start_time)
             end_time.add(parseInt(ctx.callbackQuery.data, 10), 'minutes')
             await ctx.reply(`Старт: ${start_time}, Конец: ${end_time}`)
-            // await Visit.create({ meeting_room_id: 1, peer_id: 2, start_time: res, end_time: end_time })
-            await Visit.create({ meeting_room_id: 1, peer_id: user.id, start_time: start_time, end_time: end_time, })
+            await Visit.create({ meeting_room_id: selected_room, peer_id: user.id, start_time: start_time, end_time: end_time, })
             ctx.scene.leave()
         })
 
 
 
-        const signup = new Scenes.WizardScene('signupScene', step1, step2, step3, step4)
+        const signup = new Scenes.WizardScene('signupScene', step1, step2, step3, step4, step5)
         // signup.hears('Back', goBackToStep1);
         return signup;
     }
@@ -207,7 +241,7 @@ class SceneGenerator {
             });
 
             if (bookings.length === 0) {
-                await ctx.reply('У вас нет активных бронирований.');
+                await ctx.reply(dialoguesMessages.noActiveBookings);
                 return ctx.scene.leave();
             }
             const buttons = [];
@@ -229,7 +263,7 @@ class SceneGenerator {
             const keyboard = Markup.inlineKeyboard(buttons);
 
             // Отправляем сообщение с inline клавиатурой
-            await ctx.reply('Выберите бронирование для отмены:', keyboard);
+            await ctx.reply(dialoguesMessages.chooseBookingForCancel, keyboard);
 
             // return ctx.scene.leave();
         });
@@ -242,11 +276,11 @@ class SceneGenerator {
                 }
             });
             if (!booking) {
-                await ctx.reply('Бронь не найдена.');
+                await ctx.reply(dialoguesMessages.bookingNotFound);
             } else {
                 await booking.update({ status: 3 });
                 await helperFunction.addToLimitByVisitId(bookingId)
-                await ctx.reply('Бронь успешно отменена.');
+                await ctx.reply(dialoguesMessages.cancelSuccess);
             }
 
             return ctx.scene.leave();
@@ -260,7 +294,7 @@ class SceneGenerator {
         const step2 = new Composer()
         step1.on(`text`, async (ctx) => {
 
-            await ctx.reply('Какое действие вы хотите?', {
+            await ctx.reply(adminMessages.greetingAdmin, {
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: 'Добавить новое пространство', callback_data: 'New_Space' }],
@@ -301,19 +335,19 @@ class SceneGenerator {
     newSpaceScene() {
         // Шаги сцены
         const step1 = async (ctx) => {
-            await ctx.reply('Введите название пространства:');
+            await ctx.reply(addNewSpace.addNewSpaceName);
             return ctx.wizard.next();
         };
 
         const step2 = async (ctx) => {
             ctx.session.meetingRoom = { name: ctx.message.text };
-            await ctx.reply('Введите описание пространства:');
+            await ctx.reply(addNewSpace.addNewSpaceDescription);
             return ctx.wizard.next();
         };
 
         const step3 = async (ctx) => {
             ctx.session.meetingRoom.description = ctx.message.text;
-            await ctx.reply('Введите номер этажа:');
+            await ctx.reply(addNewSpace.addNewSpaceFloor);
             return ctx.wizard.next();
         };
 
@@ -326,8 +360,8 @@ class SceneGenerator {
                 const meetingRoom = await Room.create({ name, description, floor });
                 await ctx.reply(`Пространство "${name}" успешно создано! ID: ${meetingRoom.id}`);
             } catch (error) {
-                console.error('Ошибка при создании пространства:', error);
-                await ctx.reply('Произошла ошибка при создании пространства. Пожалуйста, попробуйте еще раз.');
+                console.error(addNewSpace.addNewSpaceError, error);
+                await ctx.reply(addNewSpace.newSpaceError);
             }
 
             // Завершаем сцену
@@ -442,7 +476,7 @@ class SceneGenerator {
     addAdminScene() {
         const addAdminScene = new Scenes.BaseScene('addAdminScene');
         addAdminScene.enter(async (ctx) => {
-            await ctx.reply('Введите никнейм пользователя:');
+            await ctx.reply(adminMessages.addPeerNickname);
         })
         addAdminScene.on('message', async (ctx) => {
 
@@ -452,7 +486,7 @@ class SceneGenerator {
             const profilePeer = await Profile.findOne({ where: { nickname } });
 
             if (!profilePeer) {
-                await ctx.reply('Пользователь с таким никнеймом не найден.');
+                await ctx.reply(adminMessages.peerNotFound);
                 return ctx.scene.leave();
             }
 
@@ -460,7 +494,7 @@ class SceneGenerator {
             const existingAdmin = await Admin.findOne({ where: { peer_id: profilePeer.id } });
 
             if (existingAdmin) {
-                await ctx.reply('Этот пользователь уже является администратором.');
+                await ctx.reply(adminMessages.adminAlreadyExists);
                 return ctx.scene.leave();
             }
 
@@ -474,9 +508,6 @@ class SceneGenerator {
         })
         return addAdminScene
     }
-
-
-
 }
 
 
