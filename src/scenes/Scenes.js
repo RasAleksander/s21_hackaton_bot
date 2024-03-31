@@ -113,21 +113,16 @@ class SceneGenerator {
             if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
                 selected_date = await calendar.clickButtonCalendar(ctx.callbackQuery);
                 if (selected_date !== -1) {
-                    const visits = await Visit.findAll({
-                        where: {
-                            start_time: {
-                                [Sequelize.Op.between]: [moment(selected_date), moment(selected_date).add(1, 'days')]
-                            }
-                        }
-                    });
-                    await helperFunction.drawImage(visits);
+
+                    const buffer = await helperFunction.drawImage(selected_date);
                     const rooms = await Room.findAll();
                     const inlineKeyboard = rooms.map(room => [{
                         text: room.name,
                         callback_data: `${room.id}`,
                     }]);
-                    inlineKeyboard.push([{ text: 'Назад', callback_data: '0' }]);
-                    delete_msg = await ctx.reply(`Вы выбрали ${selected_date}. Выберите переговорку`, {
+                    inlineKeyboard.push([{ text: 'Назад', callback_data: '0' }])
+                    delete_msg = await ctx.replyWithPhoto({ source: buffer }, {
+                        caption: `Вы выбрали ${selected_date}. Выберите переговорку`,
                         reply_markup: {
                             inline_keyboard: inlineKeyboard,
                             one_time_keyboard: true,

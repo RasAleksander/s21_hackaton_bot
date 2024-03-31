@@ -110,7 +110,7 @@ class helperFunction {
 
 
         // Отправить сообщение всем пользователям из таблицы Visit
-        for (const booking of bookings) {
+        for (const booking of visits) {
             const { peer_id } = booking;
             const profile = await Profile.findOne({ where: { id: peer_id } }); // Найти профиль пользователя по его идентификатору
             console.log('пирайди' + peer_id)
@@ -238,7 +238,14 @@ class helperFunction {
         return flag
     }
 
-    static async drawImage(bookings) {
+    static async drawImage(selected_date) {
+        const visits = await Visit.findAll({
+            where: {
+                start_time: {
+                    [Sequelize.Op.between]: [moment(selected_date), moment(selected_date).add(1, 'days')]
+                }
+            }
+        });
 
         const canvasWidth = 850; // Увеличили ширину для столбца времени
         const canvasHeight = 400;
@@ -276,10 +283,10 @@ class helperFunction {
 
         // Рисуем занятые ячейки в красном цвете
         ctx.fillStyle = 'red';
-        for (const booking of bookings) {
-            const room = booking.meeting_room_id;
-            const start_time = moment(booking.start_time).format("HH:mm")
-            const end_time = moment(booking.end_time).format("HH:mm")
+        for (const visit of visits) {
+            const room = visit.meeting_room_id;
+            const start_time = moment(visit.start_time).format("HH:mm")
+            const end_time = moment(visit.end_time).format("HH:mm")
             const [startHour, startMinute] = start_time.split(':').map(Number);
             const [endHour, endMinute] = end_time.split(':').map(Number);
             if (startHour <= endHour) {
@@ -290,7 +297,8 @@ class helperFunction {
         }
         // Сохраняем изображение
         const buffer = canvas.toBuffer('image/png');
-        fs.writeFileSync('booking_schedule_with_time_column.png', buffer);
+        // fs.writeFileSync('booking_schedule_with_time_column.png', buffer);
+        return buffer;
     }
 }
 
