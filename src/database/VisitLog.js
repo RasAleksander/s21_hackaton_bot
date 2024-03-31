@@ -1,6 +1,8 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('./database');
 
+// status: 1 - забронировано, 2 - успешно подтверждено, 3 - отменено, 4 - заблокировано
+
 const VisitLog = sequelize.define('VisitLog', {
     id: {
         type: DataTypes.INTEGER.UNSIGNED,
