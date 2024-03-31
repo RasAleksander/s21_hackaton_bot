@@ -1,5 +1,5 @@
 const express = require('express');
-const helperFunction = require('./functions/helperFunc');
+const sendEmailsFunc = require('./functions/sendEmailsFunc');
 const TokenPeer = require('./database/TokenPeer');
 
 const app = express();
@@ -13,7 +13,7 @@ app.get('/verify', async (req, res) => {
   }
 
   try {
-    const isValidToken = await helperFunction.checkToken(nickname, token);
+    const isValidToken = await sendEmailsFunc.checkToken(nickname, token);
     if (isValidToken) {
         await TokenPeer.update({ verify: 1 }, { where: { nickname, token } });
       return res.send('Верификация прошла успешно');
