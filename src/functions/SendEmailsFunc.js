@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+
 const TokenPeer = require('../database/TokenPeer');
 
 require('dotenv').config()
@@ -14,20 +15,23 @@ async function sendEmail(nickname) {
         auth: {
             user: process.env.SE_EMAIL,
             pass: process.env.SE_PASS
+        },
+        tls: {
+            servername: 'smtp.gmail.com',
+            rejectUnauthorized: false
         }
     });
 
     let mailOptions = {
         from: process.env.SE_EMAIL,
         to: email,
-        subject: 'Подтверждение регистрации', // Тема письма
+        subject: 'Подтверждение регистрации',
         text: `Для завершения регистрации нашего сервиса перейдите по ссылке:
         http://${process.env.SE_HOST}:${process.env.SE_PORT}/verify?token=${token}&nickname=${encodeURIComponent(nickname)}`
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Письмо для ${nickname} успешно отправлено на адрес ${email}`);
     } catch (error) {
         console.error('Ошибка отправки письма:', error);
     }
@@ -43,7 +47,8 @@ async function checkToken(nickname, token) {
     }
   }
 
-module.exports = {
+
+  module.exports = {
     sendEmail,
     checkToken
 }
