@@ -6,6 +6,7 @@ const Room = require('../database/MeetingRoom.js');
 const City = require('../database/City');
 
 const helperFunction = require('../functions/helperFunc');
+const sendEmailsFunc = require('../functions/sendEmailsFunc');
 const Calendar = require('telegram-inline-calendar');
 const { startMessages, nicknameMessages } = require('../messages/Messages');
 const { Sequelize, DataTypes } = require('sequelize');
@@ -20,33 +21,43 @@ class SceneGenerator {
         start.enter(async (ctx) => {
             const userExists = await helperFunction.doesUserNickname(ctx.from.id);
             if (userExists) {
-                await ctx.reply(greetingSignedupPeer.greetingOldPeer + ` ${userExists}?`)
+                await ctx.reply(greetingSignedupPeer.greetingOldPeer)
                 ctx.scene.leave();
             } else {
-                await ctx.reply(greetingSignedupPeer.exception)
+                await ctx.reply(greetingUnsignedPeer.greetingNewPeer)
                 ctx.scene.enter('nicknameScene')
             }
         })
-
         return start
     }
 
-
     nicknameScene() {
+        let userExists = null;
         const nicknameScene = new Scenes.BaseScene('nicknameScene');
         nicknameScene.enter(async (ctx) => {
-            await ctx.reply('Введи свой nickname')
+            userExists = await helperFunction.doesUserNickname(ctx.from.id);
+            if (userExists) {
+                await ctx.reply(greetingSignedupPeer.greetingOldPeer)
+                ctx.scene.leave();
+            } else {
+                await ctx.reply(greetingUnsignedPeer.exception);
+            }
         });
         nicknameScene.on('message', async (ctx) => {
+            await ctx.reply(nicknameMessages.newPeer);
             const nicknameReg = new RegExp('^[\\wа-яА-Я]{4,20}$');
             let nickname = ctx.message.text;
 
+            // Некорректное имя
             if (!nicknameReg.test(nickname)) {
-                await ctx.reply(nicknameMessages.nicknameMessages);
+                await ctx.reply(nicknameMessages.wrongNickname);
                 ctx.scene.reenter();
             } else {
-                await SendEmailsFunc.sendEmail(nickname);
-                await ctx.reply(nicknameMessages.correctNickname);
+                // Корректное имя
+                // await sendEmailsFunc.sendEmail(nickname);
+                const username = ctx.from.username || 'default_username';
+                await Profile.create({ id_tg: ctx.from.id, tg_peername: username, nickname: nickname, city_id: 1, limit: 60 })
+                await ctx.reply(`${nicknameMessages.correctNickname} ${nickname}`);
             }
         });
         return nicknameScene;
