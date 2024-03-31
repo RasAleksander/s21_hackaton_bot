@@ -1,11 +1,15 @@
 const { Telegraf, Markup, Input } = require('telegraf')
+const { Sequelize } = require('sequelize');
 const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
 const moment = require('moment');
+const axios = require('axios');
+require('dotenv').config()
 const sequelize = require('../database/database');
-// const Admin = require('../database/AdminModel'); // Модель списка админов
-const Profile = require('../database/ProfilePeer'); // Модель списка админов
-const MeetingRoom = require('../database/MeetingRoom'); // Модель списка админов
+const Visit = require('../database/VisitLog.js');
+const Admin = require('../database/ProfileAdmin');
+const Profile = require('../database/ProfilePeer');
+const MeetingRoom = require('../database/MeetingRoom');
 
 class helperFunction {
     static async doesUserNickname(id) {
@@ -37,6 +41,141 @@ class helperFunction {
         return user;
     }
 
+    static async doesAdminExist(id) {
+        const user = await Profile.findOne({ where: { id_tg: id } });
+        if (!user) {
+            return false;
+        }
+        const isAdmin = await Admin.findOne({ where: { peer_id: user.id } });
+        return isAdmin;
+    }
+
+    static async sendMessage(id_tg, message) {
+        try {
+            const token = process.env.BOT_TOKEN;
+            const url = `https://api.telegram.org/bot${token}/sendMessage`;
+            const payload = {
+                chat_id: id_tg,
+                text: message
+            };
+            const response = await axios.post(url, payload);
+            console.log('Message sent:', response.data);
+        } catch (error) {
+            console.error('Error sending message:', error.message);
+        }
+
+    }
+
+    static async runScript() {
+
+        const currentTime = moment();
+        const endTimeThreshold = moment().add(16, 'minutes');
+        const startTimeThreshold = moment().subtract(16, 'minutes'); // Время, наступающее через 15 минут назад
+
+        // Найти все записи, у которых время окончания находится в промежутке между текущим временем и endTimeThreshold
+        const bookings = await Visit.findAll({
+            where: {
+                [Sequelize.Op.and]: [
+                    {
+                        [Sequelize.Op.or]: [
+                            {
+                                end_time: {
+                                    [Sequelize.Op.lte]: endTimeThreshold.toDate()
+                                }
+                            },
+                            {
+                                start_time: {
+                                    [Sequelize.Op.lte]: startTimeThreshold.toDate()
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        [Sequelize.Op.or]: [
+                            {
+                                end_time: {
+                                    [Sequelize.Op.gte]: currentTime.toDate()
+                                }
+                            },
+                            {
+                                start_time: {
+                                    [Sequelize.Op.gte]: currentTime.toDate()
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+
+        // Отправить сообщение всем пользователям из таблицы Visit
+        for (const booking of bookings) {
+            const { peer_id } = booking;
+            const profile = await Profile.findOne({ where: { id: peer_id } }); // Найти профиль пользователя по его идентификатору
+            console.log('пирайди' + peer_id)
+            const { id_tg } = profile;
+            console.log('\nТгайди' + id_tg)
+            if (profile) {
+                // const { id_tg } = profile;
+                console.log('Зашли в рассылку')
+                const timeDiffMinutes = moment(booking.end_time).diff(currentTime, 'minutes');
+                const message = `Ваше бронирование начинается/заканчивается через ${timeDiffMinutes} минут`;
+                await helperFunction.sendMessage(id_tg, message);
+            }
+        }
+    }
+
+    static async addToLimitByVisitId(visitId) {
+        try {
+            // Находим запись в таблице VisitLog по id
+            const visit = await Visit.findByPk(visitId);
+            if (!visit) {
+                throw new Error('Запись с таким id не найдена');
+            }
+            const start = visit.start_time.getTime();
+            const end = visit.end_time.getTime();
+            const differenceInMinutes = Math.ceil((end - start) / (1000 * 60));
+
+            const user = await Profile.findByPk(visit.peer_id);
+            if (!user) {
+                throw new Error('Пользователь с таким peer_id не найден');
+            }
+
+            user.limit += differenceInMinutes;
+            await user.save();
+
+            return `Лимит пользователя ${user.nickname} успешно обновлен на ${differenceInMinutes} минут`;
+        } catch (error) {
+            return `Произошла ошибка: ${error.message}`;
+        }
+    }
+
+    static async updateStatusAndAddToLimit() {
+        try {
+            // Находим все записи в таблице VisitLog, у которых разница между end_time и текущим временем равна 0 в минутах
+            const currentDateTime = moment();
+            const expiredVisits = await Visit.findAll({
+                where: {
+                    end_time: {
+                        [Sequelize.Op.lte]: currentDateTime.toDate() // Находим записи, у которых end_time меньше или равно текущему времени
+                    }
+                }
+            });
+
+            // Обновляем статус для найденных записей и вызываем функцию addToLimitByVisitId
+            for (const visit of expiredVisits) {
+                visit.status = 2; // Устанавливаем статус 2 (или любой другой, который вам нужен)
+                await visit.save(); // Сохраняем изменения
+                await helperFunction.addToLimitByVisitId(visit.id); // Вызываем функцию для добавления к лимиту
+            }
+
+            return `Успешно обновлено ${expiredVisits.length} записей и добавлено к лимиту`;
+        } catch (error) {
+            return `Произошла ошибка: ${error.message}`;
+        }
+    }
+
     static async setStartTime(date) {
         let now = moment();
         if (moment().format('YYYY-MM-DD') == date)
@@ -48,22 +187,33 @@ class helperFunction {
         now = now.format('HH:mm')
         return now;
     }
-    static async getAvailableRange(visits) {
+
+    static async getAvailableRange(selected_room, selected_date,) {
+        const visits = await Visit.findAll({
+            where: {
+                meeting_room_id: selected_room,
+                start_time: {
+                    [Sequelize.Op.between]: [moment(selected_date), moment(selected_date).add(1, 'days')]
+                }
+            },
+            attributes: ['start_time', 'end_time'], // Указываем имена атрибутов в виде строковых значений
+            order: [['start_time', 'ASC']]
+        });
         let timeRanges = []
         let str = 'Доступные диапазоны:\n'
+
         for (let i = 0; i <= visits.length; i++) {
             let start = [0, 0]
             let end = [23, 59]
-            if (i == 0 || i == visits.length) {
+            if (visits.length) {
                 if (i == 0) {
                     end = moment(visits[i].dataValues.start_time).format('HH:mm').split(':').map(Number);
-                }
-                if (i == visits.length) {
+                } else if (i == visits.length) {
                     start = moment(visits[i - 1].dataValues.end_time).format('HH:mm').split(':').map(Number);
+                } else {
+                    start = moment(visits[i - 1].dataValues.end_time).format('HH:mm').split(':').map(Number);
+                    end = moment(visits[i].dataValues.start_time).format('HH:mm').split(':').map(Number);
                 }
-            } else {
-                start = moment(visits[i - 1].dataValues.end_time).format('HH:mm').split(':').map(Number);
-                end = moment(visits[i].dataValues.start_time).format('HH:mm').split(':').map(Number);
             }
             if (!(start[0] == end[0] && start[1] == end[1])) {
                 str += start[0] + ':' + start[1] + '-' + end[0] + ':' + end[1] + '\n'
@@ -89,15 +239,6 @@ class helperFunction {
     }
 
     static async drawImage(bookings) {
-
-        // const bookings = [
-        //     { 'meeting_room_id': 1, 'start_time': '08:00', 'end_time': '08:30' },
-        //     { 'meeting_room_id': 2, 'start_time': '09:00', 'end_time': '10:00' },
-        //     { 'meeting_room_id': 3, 'start_time': '10:00', 'end_time': '11:45' },
-        //     { 'meeting_room_id': 4, 'start_time': '13:45', 'end_time': '14:15' },
-        //     { 'meeting_room_id': 5, 'start_time': '14:00', 'end_time': '15:00' },
-        //     { 'meeting_room_id': 5, 'start_time': '16:30', 'end_time': '16:15' }
-        // ];
 
         const canvasWidth = 850; // Увеличили ширину для столбца времени
         const canvasHeight = 400;
