@@ -264,8 +264,7 @@ class SceneGenerator {
                     inline_keyboard: [
                         [{ text: 'Добавить новое пространство', callback_data: 'New_Space' }],
                         [{ text: 'Заблокировать пространство', callback_data: 'Block_Space' }],
-                        [{ text: 'Разблокировать пространство', callback_data: 'Unblock_Space' }],
-                        [{ text: 'Удалить пространство', callback_data: 'Delete_Space' }],
+                        [{ text: 'Разблокировать пространство', callback_data: 'Unblock_Space' }]
                     ],
                     one_time_keyboard: true,
                 },
@@ -282,10 +281,6 @@ class SceneGenerator {
                 case 'Block_Space':
                     ctx.scene.enter('blockSpaceScene');
                     break;
-
-                case 'Delete_Space':
-                    ctx.scene.enter('deleteSpaceScene');
-                    break;
                 case 'Unblock_Space':
                     ctx.scene.enter('unblockSpaceScene');
                     break;
@@ -298,9 +293,49 @@ class SceneGenerator {
         return admin;
     }
 
-    blockSpaceScene() {
+    newSpaceScene() {
+        // Шаги сцены
+        const step1 = async (ctx) => {
+            await ctx.reply('Введите название пространства:');
+            return ctx.wizard.next();
+        };
 
-        // Создаем шаг выбора типа игры
+        const step2 = async (ctx) => {
+            ctx.session.meetingRoom = { name: ctx.message.text };
+            await ctx.reply('Введите описание пространства:');
+            return ctx.wizard.next();
+        };
+
+        const step3 = async (ctx) => {
+            ctx.session.meetingRoom.description = ctx.message.text;
+            await ctx.reply('Введите номер этажа:');
+            return ctx.wizard.next();
+        };
+
+        const step4 = async (ctx) => {
+            const { name, description } = ctx.session.meetingRoom;
+            const floor = parseInt(ctx.message.text);
+
+            try {
+                // Создаем новое пространство в базе данных
+                const meetingRoom = await Room.create({ name, description, floor });
+                await ctx.reply(`Пространство "${name}" успешно создано! ID: ${meetingRoom.id}`);
+            } catch (error) {
+                console.error('Ошибка при создании пространства:', error);
+                await ctx.reply('Произошла ошибка при создании пространства. Пожалуйста, попробуйте еще раз.');
+            }
+
+            // Завершаем сцену
+            return ctx.scene.leave();
+        };
+
+        // Создаем сцену
+        const newSpaceScene = new Scenes.WizardScene('newSpaceScene', step1, step2, step3, step4
+        );
+        return newSpaceScene
+    }
+
+    blockSpaceScene() {// Создаем шаг выбора типа игры
         const step2 = new Composer()
         const step3 = new Composer()
         const step4 = new Composer()
@@ -331,15 +366,6 @@ class SceneGenerator {
             if (ctx.callbackQuery.message.message_id == calendar.chats.get(ctx.callbackQuery.message.chat.id)) {
                 date = await calendar.clickButtonCalendar(ctx.callbackQuery);
                 if (date !== -1) {
-                    let start_date = moment(date), end_date = moment(date).add(1, 'days');
-                    const visits = await Visit.findAll({
-                        where: {
-                            start_time: {
-                                [Sequelize.Op.between]: [start_date, end_date]
-                            }
-                        }
-                    });
-
                     delete_msg = await ctx.reply(`Вы выбрали ${date}`, {
                         reply_markup: {
                             inline_keyboard: [
@@ -392,8 +418,7 @@ class SceneGenerator {
             }
         });
 
-        step5.on('callback_query', async (ctx) => {
-
+        step4.on('callback_query', async (ctx) => {
             start_time = moment(date + ' ' + start_time)
             let end_time = moment(start_time)
             end_time.add(parseInt(ctx.callbackQuery.data, 10), 'minutes')
@@ -403,11 +428,13 @@ class SceneGenerator {
             ctx.scene.leave()
         })
 
-        const blockSpace = new Scenes.WizardScene('blockSpaceScene', step1, step2, step3, step4)
-        // signup.hears('Back', goBackToStep1);
-        return blockSpace;
 
+        const blockSpaceScene = new Scenes.WizardScene('blockSpaceScene', step1, step2, step3, step4)
+        // signup.hears('Back', goBackToStep1);
+        return blockSpaceScene;
     }
+
+
 
 
 

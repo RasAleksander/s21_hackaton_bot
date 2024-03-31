@@ -25,8 +25,9 @@ const nicknameScene = createScene.nicknameScene()
 const signupScene = createScene.signupScene()
 const cancelScene = createScene.cancelScene()
 const adminScene = createScene.adminScene()
+const newSpaceScene = createScene.newSpaceScene()
 const blockSpaceScene = createScene.blockSpaceScene()
-const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, cancelScene, adminScene, blockSpaceScene])
+const stage = new Scenes.Stage([startScene, nicknameScene, signupScene, cancelScene, adminScene, newSpaceScene, blockSpaceScene])
 
 
 // Команды без диалога
