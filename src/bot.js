@@ -13,6 +13,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Файлы
 const helperFunction = require('./functions/helperFunc');
+const { dialoguesMessages } = require('../messages/Messages');
 
 
 // Сцены
@@ -51,6 +52,10 @@ bot.command('signup', async (ctx) => {
 
 bot.command('bookings', async (ctx) => {
     ctx.scene.enter(`bookingsScene`)
+})
+
+bot.command('info', async (ctx) => {
+    ctx.reply(dialoguesMessages.rulesList)
 })
 
 bot.command('admin', async (ctx) => {
